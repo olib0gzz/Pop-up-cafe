@@ -1,0 +1,25 @@
+COFFEE COUNTER POS - IPHONE SETUP
+
+1. PUT THE FOLDER ONLINE ONCE (needed so the iPhone can install it)
+   Upload all files in this folder, as they are, to any free HTTPS static host:
+   - GitHub Pages: new public repo > upload these files > Settings > Pages > Deploy from branch "main".
+   - Netlify: sign in > Add new site > Deploy manually > drag this folder in.
+   You get a link like https://yourname.github.io/coffee-pos/
+
+2. INSTALL ON THE IPHONE
+   - AirPrint printer, or a printer whose app accepts shared images:
+     Open the link in Safari > Share > Add to Home Screen. Open it from the Home Screen once
+     while online. After that it works with no internet.
+     In the app: Settings > Printer > "Share sheet".
+   - Cheap Bluetooth thermal printer (58/80 mm, ESC/POS, Bluetooth LE):
+     Install the free "Bluefy - Web BLE Browser" app, open the link in Bluefy and bookmark it.
+     In the app: Settings > Printer > "Bluetooth" > Connect printer > Test print.
+     Note: Bluefy needs the page loaded once per session; keep its tab open during the event.
+
+3. EVERY DAY
+   Report tab > Print end-of-day report. Settings > Save backup.
+   Sales live only on that phone until you back them up.
+
+UPDATING
+   If you change index.html later, also change VERSION in sw.js (e.g. coffee-pos-v2)
+   so installed phones pick up the new copy.

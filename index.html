@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coffee Counter POS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Counter POS">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1E1A" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+/* Layout: phone-first. Menu grid fills the screen, the order slides up as a sheet, tabs sit at the bottom.
+   From 900px wide (iPad landscape, laptop) the order becomes a fixed right-hand column. */
+:root{
+  --bg:#F1F3EE; --surface:#FFFFFF; --sunk:#E6E9E2; --ink:#1C1F1B; --muted:#646A61; --line:#D7DBD1;
+  --accent:#1E6B57; --accent-ink:#FFFFFF; --accent-soft:#DDEDE6;
+  --danger:#B42318; --danger-ink:#FFFFFF; --danger-soft:#FBE5E2; --shade:rgba(12,16,12,.48);
+  --ui: -apple-system,system-ui,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,"SF Mono",Menlo,Consolas,"Courier New",monospace;
+  --r:12px; --tb:58px; --hh:56px;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111411; --surface:#1A1E1A; --sunk:#252A25; --ink:#ECEFE8; --muted:#9AA196; --line:#30362F;
+  --accent:#5DC09F; --accent-ink:#0A1913; --accent-soft:#1B3A2F;
+  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111411; --surface:#1A1E1A; --sunk:#252A25; --ink:#ECEFE8; --muted:#9AA196; --line:#30362F;
+  --accent:#5DC09F; --accent-ink:#0A1913; --accent-soft:#1B3A2F;
+  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); color-scheme:dark}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 var(--ui);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+body.locked{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:26px;letter-spacing:-.01em}
+h2{font-size:20px}
+h3{font-size:16px}
+p{margin:0}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.hint{font-size:14px;color:var(--muted)}
+
+/* 16px inputs stop iOS Safari from zooming on focus */
+input:not([type=checkbox]):not([type=file]),select,textarea{
+  font-size:16px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-width:0;width:100%;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none;margin:0}
+
+.primary,.ghost,.danger{border-radius:12px;padding:12px 18px;font-weight:700;border:1px solid transparent;white-space:nowrap;min-height:46px}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.primary:disabled{opacity:.4}
+.ghost{background:transparent;border-color:var(--line)}
+.ghost:active{background:var(--sunk)}
+.danger{background:var(--danger);color:var(--danger-ink)}
+.danger-text{color:var(--danger)}
+.sm{padding:8px 13px;font-size:14px;border-radius:10px;min-height:38px}
+.xl{padding:16px;font-size:18px;width:100%;min-height:56px}
+.icon-btn{border:1px solid var(--line);background:transparent;border-radius:10px;width:44px;height:44px;font-size:20px;line-height:1;flex:none;display:grid;place-items:center}
+.icon-btn:disabled{opacity:.35}
+.icon-btn svg{width:22px;height:22px}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(var(--gl) * -1) calc(var(--gr) * -1);padding-inline:var(--gl) var(--gr)}
+.chips.scroll::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;white-space:nowrap;flex:none;min-height:38px}
+.chip small{font-weight:500;opacity:.8}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* ---------- Shell ---------- */
+body::before{content:"";position:fixed;inset:0 0 auto;height:var(--sat);background:var(--surface);z-index:31}
+.top{position:sticky;top:var(--sat);z-index:30;display:flex;align-items:center;gap:12px;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:var(--gl);padding-right:var(--gr);min-height:56px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.brand svg{width:30px;height:30px;color:var(--accent);flex:none}
+.brand strong{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.today{text-align:right;font-size:12px;color:var(--muted);line-height:1.25;font-variant-numeric:tabular-nums;flex:none}
+.today b{display:block;color:var(--ink);font-size:16px}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;padding-block:10px;padding-left:var(--gl);padding-right:var(--gr);font-size:14px;font-weight:600}
+.banner.warn{background:var(--danger-soft);color:var(--danger)}
+.banner.info{background:var(--accent-soft);color:var(--ink)}
+main{padding-bottom:calc(var(--tb) + var(--sab) + 84px)}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:var(--sab);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:var(--tb);border:0;background:none;color:var(--muted);font-size:11px;font-weight:650}
+.tabbar svg{width:24px;height:24px}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+
+/* ---------- Register ---------- */
+.menu-tools{position:sticky;top:calc(var(--sat) + var(--hh));z-index:5;background:var(--bg);display:grid;gap:10px;padding-block:12px 10px;padding-left:var(--gl);padding-right:var(--gr)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding-left:var(--gl);padding-right:var(--gr)}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;text-align:left;min-height:92px;padding:12px 14px;
+  border:1px solid var(--line);background:var(--surface);border-radius:var(--r);transition:transform .08s ease,border-color .15s,box-shadow .15s}
+.tile:active{transform:scale(.97)}
+.tile.flash{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.t-name{font-weight:650;line-height:1.25;padding-right:22px}
+.t-price{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.t-price b{color:var(--ink);font-weight:650;white-space:nowrap;font-size:14px}
+.t-price span{white-space:nowrap}
+.badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink);
+  font-size:13px;font-weight:800;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.empty{padding:32px 8px;color:var(--muted);text-align:center;grid-column:1/-1}
+
+.orderbar{position:fixed;z-index:25;left:calc(var(--gl) - 4px);right:calc(var(--gr) - 4px);bottom:calc(var(--tb) + var(--sab) + 10px);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;border-radius:16px;padding:14px 18px;min-height:58px;
+  background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+.orderbar .ob-n{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:rgba(255,255,255,.22);margin-right:8px;font-variant-numeric:tabular-nums}
+.orderbar .ob-t{font-size:18px;font-variant-numeric:tabular-nums}
+
+/* Order: full-screen sheet on phones */
+.ticket{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;background:var(--surface);
+  padding-top:var(--sat);transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.ticket.open{transform:none;visibility:visible}
+.t-head{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding-block:10px;padding-left:var(--gl);padding-right:var(--gr);border-bottom:1px solid var(--line)}
+.t-title{text-align:center}
+.t-no{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.t-cust{padding-block:12px 4px;padding-left:var(--gl);padding-right:var(--gr)}
+.lines{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding-left:calc(var(--gl) - 8px);padding-right:calc(var(--gr) - 8px)}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:12px 8px;border-bottom:1px solid var(--line)}
+.l-main{border:0;background:transparent;text-align:left;padding:0;min-width:0}
+.l-name{font-weight:650}
+.l-var{color:var(--muted);font-weight:500}
+.l-mods,.l-note{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.l-note{font-style:italic}
+.l-amt{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.l-ctl{display:flex;justify-content:space-between;align-items:center;grid-column:1/-1}
+.l-ctl .unit{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:11px;overflow:hidden;flex:none}
+.qty button{border:0;background:var(--sunk);width:40px;height:40px;font-size:20px;line-height:1}
+.qty span{min-width:36px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.qty.lg button{width:52px;height:52px;font-size:24px}
+.qty.lg span{min-width:46px;font-size:19px}
+.t-empty{padding:48px 16px;text-align:center;color:var(--muted)}
+.t-foot{border-top:1px solid var(--line);display:grid;gap:6px;background:var(--surface);
+  padding-block:12px calc(14px + var(--sab));padding-left:var(--gl);padding-right:var(--gr)}
+.disc-row{display:grid;gap:8px;margin-bottom:6px}
+.disc-row .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;align-items:center}
+.disc-row .chips::-webkit-scrollbar{display:none}
+.disc-row .chip{padding:7px 12px;font-size:14px;min-height:36px}
+.sum{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.sum.total{font-size:26px;font-weight:800;margin-block:2px 8px;letter-spacing:-.01em}
+.sum.disc{color:var(--accent)}
+.sheet-close{display:grid}
+
+@media (min-width:900px){
+  main{padding-bottom:calc(var(--tb) + var(--sab) + 16px)}
+  .register{display:grid;grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+  .ticket{position:sticky;top:calc(var(--sat) + var(--hh));inset:auto;transform:none;visibility:visible;transition:none;padding-top:0;
+    height:calc(100dvh - var(--sat) - var(--hh) - var(--tb) - var(--sab));border-left:1px solid var(--line);z-index:4}
+  .t-foot{padding-bottom:14px}
+  .orderbar,.sheet-close{display:none!important}
+  .grid{padding-bottom:20px}
+}
+
+/* ---------- Modal (bottom sheet on phone) ---------- */
+#modal-root{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.backdrop{position:absolute;inset:0;background:var(--shade);animation:fade .2s ease}
+.modal{position:relative;background:var(--surface);width:100%;max-height:calc(100dvh - var(--sat) - 12px);overflow:auto;-webkit-overflow-scrolling:touch;
+  border-radius:20px 20px 0 0;display:grid;gap:16px;box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:up .26s cubic-bezier(.2,.8,.2,1);
+  padding-top:22px;padding-bottom:calc(20px + var(--sab));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.modal::before{content:"";position:absolute;top:8px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--line)}
+@media (min-width:600px){
+  #modal-root{align-items:center;padding:16px}
+  .modal{width:min(480px,100%);border-radius:18px;padding-bottom:22px;max-height:calc(100dvh - 32px)}
+  .modal.wide{width:min(600px,100%)}
+  .modal::before{display:none}
+}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.m-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.m-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.m-actions.stack{display:grid;grid-template-columns:1fr 1fr}
+.m-actions.stack .primary{grid-column:1/-1}
+.m-actions .spacer{flex:1}
+.m-foot{display:flex;gap:12px;align-items:center}
+.m-foot .primary{flex:1;min-height:56px;font-size:17px}
+.field{display:grid;gap:7px}
+.label{font-size:14px;font-weight:650;color:var(--muted)}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1 1 90px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 8px;font-weight:700;min-height:56px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center}
+.seg button small{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.seg button.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.big-amt{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+.pay-total{text-align:center;padding-top:4px}
+.change-row{display:flex;justify-content:space-between;align-items:baseline;background:var(--sunk);border-radius:12px;padding:12px 14px;margin-top:4px}
+.change-row strong{font-size:22px;font-variant-numeric:tabular-nums}
+.change-row.short strong{color:var(--danger)}
+.done{text-align:center;display:grid;gap:4px}
+.paper{background:#fff;color:#000;border-radius:12px;padding:14px 10px;display:flex;justify-content:center;max-height:38dvh;overflow:auto;border:1px solid var(--line)}
+.check{display:flex;gap:12px;align-items:center;font-weight:600;min-height:40px}
+.vars{display:grid;gap:8px}
+.var-row{display:grid;grid-template-columns:minmax(0,1fr) 104px auto;gap:8px;align-items:center}
+.err{color:var(--danger);font-size:14px;font-weight:600}
+
+/* ---------- Pages ---------- */
+.page{padding-block:20px 24px;padding-left:var(--gl);padding-right:var(--gr)}
+.page-inner{max-width:1000px;margin:0 auto;display:grid;gap:16px}
+.page-head{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.tools{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.tools label{display:grid;gap:4px;font-size:12px;font-weight:650;color:var(--muted);flex:1 1 140px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0;overflow:hidden}
+.card-h{padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td,th{padding:10px 16px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.r{text-align:right}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:700px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kpi{padding:14px 16px;display:grid;gap:4px}
+.kpi .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.o-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:13px 16px;border:0;
+  border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.o-row:last-child{border-bottom:0}
+.o-row:active{background:var(--sunk)}
+.o-no{font-weight:800;font-variant-numeric:tabular-nums}
+.o-no small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.o-items{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.o-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.o-amt small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.o-row.void .o-items,.o-row.void .o-amt{text-decoration:line-through;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--danger-soft);color:var(--danger)}
+.menu-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:13px 16px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.menu-row:active{background:var(--sunk)}
+.menu-row:last-child{border-bottom:0}
+.menu-row .p{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;text-align:right}
+.addon-row{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);align-items:center}
+.form{display:grid;gap:14px;padding:6px 16px 16px}
+.form-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.status{display:grid;gap:10px}
+.st{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;margin-top:6px}
+.dot.ok{background:var(--accent)}
+.dot.bad{background:var(--danger)}
+.bt-box{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--sunk);border-radius:12px;padding:12px 14px}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--tb) + var(--sab) + 84px);transform:translate(-50%,16px);opacity:0;background:var(--ink);color:var(--bg);
+  padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:opacity .2s,transform .2s;pointer-events:none;z-index:80;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- Receipt preview + print dialog ---------- */
+#print-area{display:none}
+.rcpt{width:var(--pw,72mm);font:var(--pfs,12px)/1.35 var(--mono);color:#000;background:#fff}
+.r-row{display:flex;justify-content:space-between;gap:8px}
+.r-row span:first-child{overflow-wrap:anywhere}
+.r-row span:last-child{text-align:right;white-space:nowrap}
+.r-ind{padding-left:3ch}
+.r-c{text-align:center;overflow-wrap:anywhere}
+.r-s{font-size:.88em}.r-l{font-size:1.3em}.r-xl{font-size:2.6em;line-height:1.1}
+.r-b{font-weight:700}
+.r-hr{border-top:1px dashed #000;margin:6px 0}
+.r-gap{height:1.4em}
+@media print{
+  @page{margin:0}
+  html,body{background:#fff!important;color:#000}
+  body::before,#app,#modal-root,#toast,.tabbar,.orderbar,.ticket{display:none!important}
+  #print-area{display:block!important;padding:0 2mm}
+  .pg{break-after:page;page-break-after:always}
+  .pg:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top" id="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 12h17v7a7 7 0 0 1-7 7h-3a7 7 0 0 1-7-7v-7Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M23 14h2a3 3 0 0 1 0 6h-2" stroke="currentColor" stroke-width="2.2"/><path d="M11 4.5c-1 1.3 1 2.2 0 3.5M16 4.5c-1 1.3 1 2.2 0 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <strong id="brandName"></strong>
+    </div>
+    <div class="today"><b id="todayNet"></b><span id="todayCount"></span></div>
+  </header>
+  <div class="banner warn" id="storageBanner" hidden>Storage is blocked here, so sales would be lost. Turn off Private Browsing and reopen the app.</div>
+  <div class="banner info" id="installBanner" hidden><span>To install: tap <b>Share</b> then <b>Add to Home Screen</b>. It will open like an app and work without internet.</span><button class="ghost sm" id="installOk" type="button">OK</button></div>
+
+  <main>
+    <!-- REGISTER -->
+    <section id="v-register" class="view register">
+      <div>
+        <div class="menu-tools">
+          <input id="search" type="search" placeholder="Search menu" aria-label="Search menu" autocomplete="off" enterkeyhint="search">
+          <div class="chips scroll" id="cats"></div>
+        </div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <aside class="ticket" id="ticket" aria-label="Current order">
+        <div class="t-head">
+          <button class="icon-btn sheet-close" id="sheetClose" type="button" aria-label="Back to menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="t-title"><div class="eyebrow">Order</div><div class="t-no" id="nextNo">#001</div></div>
+          <button class="ghost sm" id="clearCart" type="button">Clear</button>
+        </div>
+        <div class="t-cust"><input id="customer" placeholder="Customer name (for calling orders)" aria-label="Customer name" autocomplete="off" enterkeyhint="done"></div>
+        <div class="lines" id="lines"></div>
+        <div class="t-foot">
+          <div class="disc-row"><div class="chips" id="discChips"></div></div>
+          <div class="sum"><span>Subtotal</span><span id="tSub"></span></div>
+          <div class="sum disc" id="discLine"><span id="tDiscLbl"></span><span id="tDisc"></span></div>
+          <div class="sum total"><span>Total</span><span id="tTotal"></span></div>
+          <button class="primary xl" id="charge" type="button">Charge</button>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="v-orders" class="view page" hidden>
+      <div class="page-inner">
+        <div class="page-head">
+          <div><h1>Orders</h1><p class="muted" id="oSummary"></p></div>
+          <div class="tools"><label for="oDate">Date<input type="date" id="oDate"></label></div>
+        </div>
+        <div class="card" id="oList"></div>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section id="v-report" class="view page" hidden>
+      <div class="page-inner">
+        <div class="page-head"><div><h1>Sales report</h1><p class="muted" id="rRange"></p></div></div>
+        <div class="tools">
+          <label for="rFrom">From<input type="date" id="rFrom"></label>
+          <label for="rTo">To<input type="date" id="rTo"></label>
+        </div>
+        <div class="kpis" id="rKpis"></div>
+        <div class="m-actions" style="justify-content:flex-start">
+          <button class="primary" id="rPrint" type="button">Print end-of-day report</button>
+          <button class="ghost" id="rCsv" type="button">Export CSV</button>
+        </div>
+        <div class="two">
+          <div class="card"><div class="card-h"><h3>By payment</h3></div><div class="tbl-wrap"><table id="rMethods"></table></div></div>
+          <div class="card"><div class="card-h"><h3>Items sold</h3></div><div class="tbl-wrap"><table id="rItems"></table></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="v-menu" class="view page" hidden>
+      <div class="page-inner">
+        <div class="page-head">
+          <div><h1>Menu</h1><p class="muted">Tap an item to change its sizes or prices.</p></div>
+          <button class="primary" id="mNew" type="button">Add item</button>
+        </div>
+        <div id="mGroups" style="display:grid;gap:14px"></div>
+        <div class="card">
+          <div class="card-h"><h3>Add-ons</h3><button class="ghost sm" id="aNew" type="button">Add add-on</button></div>
+          <p class="hint" style="padding:0 16px 8px">Shown on items with add-ons turned on. Use price 0 for free options like “Iced” or “Less sweet”.</p>
+          <div id="aList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="v-settings" class="view page" hidden>
+      <div class="page-inner">
+        <h1>Settings</h1>
+
+        <div class="card">
+          <div class="card-h"><h3>Printer</h3><button class="ghost sm" id="testPrint" type="button">Test print</button></div>
+          <div class="form">
+            <div class="field"><div class="label">How receipts print</div>
+              <div class="seg" id="pmSeg">
+                <button type="button" data-pm="share">Share sheet<small>AirPrint or printer app</small></button>
+                <button type="button" data-pm="bluetooth">Bluetooth<small>Direct to thermal printer</small></button>
+                <button type="button" data-pm="dialog">Print dialog<small>Laptop or iPad</small></button>
+              </div>
+              <p class="hint" id="pmHint"></p>
+            </div>
+            <div class="bt-box" id="btBox">
+              <div class="st"><span class="dot" id="btDot"></span><span id="btStatus"></span></div>
+              <button class="primary sm" id="btConnect" type="button">Connect printer</button>
+            </div>
+            <div class="field"><label class="label" for="s-paper">Paper width</label>
+              <select id="s-paper" data-key="paper"><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
+            <label class="check"><input type="checkbox" id="s-autoPrint" data-key="autoPrint"> Print receipt right after each sale</label>
+            <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Also print a barista ticket</label>
+            <label class="check" data-bt-only><input type="checkbox" id="s-cutPaper" data-key="cutPaper"> Cut paper after printing (printers with a cutter)</label>
+            <label class="check" data-bt-only><input type="checkbox" id="s-btSlow" data-key="btSlow"> Slow mode (try this if receipts print garbled or cut off)</label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Receipt</h3></div>
+          <div class="form">
+            <div class="field"><label class="label" for="s-shopName">Shop name</label><input id="s-shopName" data-key="shopName"></div>
+            <div class="field"><label class="label" for="s-address">Address or location</label><input id="s-address" data-key="address"></div>
+            <div class="field"><label class="label" for="s-contact">Contact (phone, IG, etc.)</label><input id="s-contact" data-key="contact"></div>
+            <div class="field"><label class="label" for="s-cashier">Cashier name (optional)</label><input id="s-cashier" data-key="cashier"></div>
+            <div class="field"><label class="label" for="s-footer">Footer message</label><input id="s-footer" data-key="footer"></div>
+            <label class="check"><input type="checkbox" id="s-notOfficial" data-key="notOfficial"> Print “This is not an official receipt.”</label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Checkout</h3></div>
+          <div class="form">
+            <div class="field"><label class="label" for="s-methods">Payment methods (comma separated)</label><input id="s-methods" data-key="methods"></div>
+            <div class="field"><label class="label" for="s-currency">Currency symbol</label><input id="s-currency" data-key="currency" maxlength="4"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Offline &amp; data</h3></div>
+          <div class="form">
+            <div class="status" id="appStatus"></div>
+            <p class="hint">Sales are saved on this phone only. Save a backup at the end of each day (to Files, Drive, or send it to yourself).</p>
+            <div class="m-actions stack">
+              <button class="primary" id="dBackup" type="button">Save backup</button>
+              <button class="ghost" id="dRestore" type="button">Restore backup</button>
+              <button class="ghost" id="dResetMenu" type="button">Load sample menu</button>
+              <button class="ghost danger-text" id="dClear" type="button">Delete all sales</button>
+              <input type="file" id="dFile" accept="application/json,.json" hidden>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button class="orderbar" id="orderBar" type="button" hidden><span><span class="ob-n" id="obN">0</span>Review order</span><span class="ob-t" id="obT"></span></button>
+
+<nav class="tabbar" id="tabs" aria-label="Sections">
+  <button data-view="register" type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 10.5h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3.5c-.8 1 .8 1.7 0 2.7M12 3.5c-.8 1 .8 1.7 0 2.7"/></svg>Register</button>
+  <button data-view="orders" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>Orders</button>
+  <button data-view="report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-8M12 20V5M19 20v-5M3 20h18"/></svg>Report</button>
+  <button data-view="menu" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Menu</button>
+  <button data-view="settings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</button>
+</nav>
+
+<div id="modal-root" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="print-area"></div>
+
+<script>
+(() => {
+'use strict';
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const uid = () => Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 8);
+const r2 = n => Math.round((+n + Number.EPSILON) * 100) / 100;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dkey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const today = () => dkey(Date.now());
+const fmtTime = ts => new Date(ts).toLocaleTimeString('en-PH', {hour: 'numeric', minute: '2-digit'});
+const fmtDate = ts => new Date(ts).toLocaleDateString('en-PH', {year: 'numeric', month: 'short', day: 'numeric'});
+const fmtKey = k => { const [y, m, d] = k.split('-').map(Number); return fmtDate(new Date(y, m - 1, d).getTime()); };
+const pad3 = n => String(n).padStart(3, '0');
+const money = n => (S.currency || '') + r2(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const moneyShort = n => { const v = r2(n); return (S.currency || '') + (Number.isInteger(v) ? v.toLocaleString('en-PH') : v.toLocaleString('en-PH', {minimumFractionDigits: 2})); };
+const isCash = m => /cash/i.test(m || '');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const hasBT = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+const wideMQ = matchMedia('(min-width: 900px)');
+
+const NS = 'coffeepos:';
+let storageOK = true;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(NS + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch (e) { if (storageOK) toast('Could not save. Phone storage is full or blocked.'); storageOK = false; } }
+};
+try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } catch (e) { storageOK = false; }
+
+/* ================= data ================= */
+const DEFAULT_SETTINGS = {shopName: 'Pop-Up Coffee', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
+  notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: false,
+  printMode: '', cutPaper: true, btSlow: false};
+const SAMPLE_MENU = [
+  ['Espresso', 'Americano', [['12 oz', 110], ['16 oz', 130]], true],
+  ['Espresso', 'Café Latte', [['12 oz', 130], ['16 oz', 150]], true],
+  ['Espresso', 'Spanish Latte', [['12 oz', 145], ['16 oz', 165]], true],
+  ['Espresso', 'Caramel Macchiato', [['12 oz', 155], ['16 oz', 175]], true],
+  ['Espresso', 'Mocha', [['12 oz', 150], ['16 oz', 170]], true],
+  ['Espresso', 'Cold Brew', [['16 oz', 140]], true],
+  ['Non-Coffee', 'Matcha Latte', [['12 oz', 150], ['16 oz', 170]], true],
+  ['Non-Coffee', 'Iced Chocolate', [['16 oz', 130]], true],
+  ['Non-Coffee', 'Strawberry Milk', [['16 oz', 140]], true],
+  ['Pastry', 'Butter Croissant', [['', 95]], false],
+  ['Pastry', 'Banana Bread', [['', 85]], false],
+  ['Pastry', 'Ensaymada', [['', 75]], false],
+  ['Pastry', 'Choc Chip Cookie', [['', 65]], false],
+  ['Others', 'Bottled Water', [['', 30]], false],
+];
+const SAMPLE_ADDONS = [['Extra shot', 30], ['Oat milk', 35], ['Vanilla syrup', 20], ['Sea salt cream', 35], ['Iced', 0], ['Less sweet', 0]];
+const sampleMenu = () => SAMPLE_MENU.map(([cat, name, v, a]) => ({id: uid(), cat, name, variants: v.map(([label, price]) => ({label, price})), addons: a}));
+const sampleAddons = () => SAMPLE_ADDONS.map(([name, price]) => ({id: uid(), name, price}));
+const emptyCart = () => ({lines: [], customer: '', discount: {kind: 'none', value: 0, label: ''}});
+
+let S, MENU, ADDONS, ORDERS, SEQ, cart;
+function load() {
+  S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
+  if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
+  MENU = store.get('menu', null) || sampleMenu();
+  ADDONS = store.get('addons', null) || sampleAddons();
+  ORDERS = store.get('orders', []);
+  SEQ = store.get('seq', {date: '', n: 0});
+  cart = Object.assign(emptyCart(), store.get('cart', {}));
+}
+const saveSettings = () => store.set('settings', S);
+const saveMenu = () => { store.set('menu', MENU); store.set('addons', ADDONS); };
+const saveOrders = () => { store.set('orders', ORDERS); store.set('seq', SEQ); };
+const saveCart = () => store.set('cart', cart);
+
+/* ================= math ================= */
+const lineUnit = l => r2(l.price + l.addons.reduce((a, x) => a + x.price, 0));
+const lineTotal = l => r2(lineUnit(l) * l.qty);
+function totals(c) {
+  const sub = r2(c.lines.reduce((a, l) => a + lineTotal(l), 0));
+  const d = c.discount; let disc = 0;
+  if (d.kind === 'pct') disc = r2(sub * d.value / 100);
+  else if (d.kind === 'amt') disc = r2(Math.min(sub, d.value));
+  return {sub, disc, total: r2(sub - disc)};
+}
+const peekNo = () => (SEQ.date === today() ? SEQ.n : 0) + 1;
+function takeNo() { const t = today(); if (SEQ.date !== t) SEQ = {date: t, n: 0}; SEQ.n += 1; return SEQ.n; }
+
+/* ================= ui primitives ================= */
+let toastT;
+function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms || 2400); }
+
+const modalRoot = $('#modal-root');
+const ticketEl = $('#ticket');
+let modalOnClose = null;
+function syncLock() { document.body.classList.toggle('locked', !modalRoot.hidden || (ticketEl.classList.contains('open') && !wideMQ.matches)); }
+function openModal(html, wide) {
+  modalOnClose = null;
+  modalRoot.innerHTML = `<div class="backdrop" data-close></div><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div>`;
+  modalRoot.hidden = false; syncLock();
+  const f = modalRoot.querySelector('[autofocus]');
+  if (f && !(isIOS && f.tagName === 'INPUT' && f.type === 'number')) setTimeout(() => f.focus(), 60);
+  return modalRoot.querySelector('.modal');
+}
+function closeModal() {
+  if (modalRoot.hidden) return;
+  modalRoot.hidden = true; modalRoot.innerHTML = ''; syncLock();
+  const f = modalOnClose; modalOnClose = null; if (f) f();
+}
+modalRoot.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!modalRoot.hidden) closeModal(); else closeSheet(); } });
+function confirmBox({title, body = '', ok = 'Confirm', danger = false}) {
+  return new Promise(res => {
+    const m = openModal(`<h2>${esc(title)}</h2>${body ? `<p class="muted">${body}</p>` : ''}
+      <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="${danger ? 'danger' : 'primary'}" id="cOk" type="button">${esc(ok)}</button></div>`);
+    let done = false;
+    modalOnClose = () => { if (!done) res(false); };
+    m.querySelector('#cOk').onclick = () => { done = true; closeModal(); res(true); };
+  });
+}
+function saveFile(name, content, type) {
+  const file = new File([content], name, {type});
+  if (isIOS && navigator.canShare && navigator.canShare({files: [file]})) {
+    navigator.share({files: [file]}).catch(() => {}); return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* ================= receipts (one spec, three outputs) =================
+   Row kinds: c = centered, lr = left/right pair, t = left text, hr = dashed rule, gap = blank space.
+   sz: s | m | l | xl, b = bold, ind = indented. */
+function receiptSpec(o, test) {
+  const R = [];
+  if (test) R.push({k: 'c', t: '*** TEST PRINT ***', b: 1});
+  R.push({k: 'c', t: S.shopName, sz: 'l', b: 1});
+  if (S.address) R.push({k: 'c', t: S.address});
+  if (S.contact) R.push({k: 'c', t: S.contact});
+  R.push({k: 'hr'});
+  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: fmtDate(o.ts)});
+  R.push({k: 'lr', l: o.customer ? o.customer : '', r: fmtTime(o.ts)});
+  if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
+  if (o.voided) R.push({k: 'c', t: '*** VOIDED ***', b: 1});
+  R.push({k: 'hr'});
+  o.lines.forEach(l => {
+    R.push({k: 'lr', l: l.qty + ' x ' + l.name + (l.variant ? ' ' + l.variant : ''), r: money(lineTotal(l))});
+    if (l.qty > 1) R.push({k: 't', t: '@ ' + money(lineUnit(l)), ind: 1, sz: 's'});
+    l.addons.forEach(a => R.push({k: 't', t: '+ ' + a.name + (a.price ? ' ' + money(a.price) : ''), ind: 1, sz: 's'}));
+    if (l.note) R.push({k: 't', t: '* ' + l.note, ind: 1, sz: 's'});
+  });
+  R.push({k: 'hr'});
+  R.push({k: 'lr', l: 'Subtotal', r: money(o.sub)});
+  if (o.disc) R.push({k: 'lr', l: o.discLabel || 'Discount', r: '-' + money(o.disc)});
+  R.push({k: 'lr', l: 'TOTAL', r: money(o.total), sz: 'l', b: 1});
+  R.push({k: 'lr', l: o.method, r: money(o.tendered)});
+  if (isCash(o.method)) R.push({k: 'lr', l: 'Change', r: money(o.change)});
+  if (o.ref) R.push({k: 'lr', l: 'Ref no.', r: o.ref});
+  R.push({k: 'hr'});
+  if (S.footer) R.push({k: 'c', t: S.footer});
+  if (S.notOfficial) R.push({k: 'c', t: 'This is not an official receipt.', sz: 's'});
+  return R;
+}
+function baristaSpec(o) {
+  const R = [{k: 'c', t: 'BARISTA TICKET', b: 1}, {k: 'c', t: '#' + pad3(o.no), sz: 'xl', b: 1}];
+  if (o.customer) R.push({k: 'c', t: o.customer, sz: 'l', b: 1});
+  R.push({k: 'c', t: fmtTime(o.ts)}, {k: 'hr'});
+  o.lines.forEach(l => {
+    R.push({k: 't', t: l.qty + ' x ' + l.name + (l.variant ? ' ' + l.variant : ''), b: 1, sz: 'l'});
+    l.addons.forEach(a => R.push({k: 't', t: '+ ' + a.name, ind: 1}));
+    if (l.note) R.push({k: 't', t: '* ' + l.note, ind: 1, b: 1});
+  });
+  R.push({k: 'hr'});
+  return R;
+}
+function reportSpec(f, t, r) {
+  const R = [{k: 'c', t: S.shopName, sz: 'l', b: 1}, {k: 'c', t: 'SALES REPORT', b: 1}, {k: 'c', t: rangeLabel(f, t)},
+    {k: 'c', t: 'Printed ' + fmtDate(Date.now()) + ' ' + fmtTime(Date.now()), sz: 's'}, {k: 'hr'},
+    {k: 'lr', l: 'Orders', r: String(r.count)}, {k: 'lr', l: 'Gross sales', r: money(r.gross)}, {k: 'lr', l: 'Discounts', r: '-' + money(r.disc)},
+    {k: 'lr', l: 'NET SALES', r: money(r.net), sz: 'l', b: 1}, {k: 'lr', l: 'Average order', r: money(r.avg)}, {k: 'lr', l: 'Voided orders', r: String(r.voided)},
+    {k: 'hr'}, {k: 't', t: 'BY PAYMENT', b: 1}];
+  if (r.methodList.length) r.methodList.forEach(([k, v]) => R.push({k: 'lr', l: k + ' (' + v.n + ')', r: money(v.amt)})); else R.push({k: 't', t: 'None'});
+  R.push({k: 'hr'}, {k: 't', t: 'ITEMS SOLD', b: 1});
+  if (r.itemList.length) r.itemList.forEach(([k, v]) => R.push({k: 'lr', l: v.qty + ' x ' + k, r: money(v.amt)})); else R.push({k: 't', t: 'None'});
+  R.push({k: 'hr'});
+  return R;
+}
+
+function specToHTML(spec) {
+  const cls = r => [r.sz && r.sz !== 'm' ? 'r-' + r.sz : '', r.b ? 'r-b' : '', r.ind ? 'r-ind' : ''].join(' ');
+  return '<div class="rcpt">' + spec.map(r => {
+    if (r.k === 'hr') return '<div class="r-hr"></div>';
+    if (r.k === 'gap') return '<div class="r-gap"></div>';
+    if (r.k === 'c') return `<div class="r-c ${cls(r)}">${esc(r.t)}</div>`;
+    if (r.k === 't') return `<div class="${cls(r)}">${esc(r.t)}</div>`;
+    return `<div class="r-row ${cls(r)}"><span>${esc(r.l)}</span><span>${esc(r.r)}</span></div>`;
+  }).join('') + '</div>';
+}
+function previewPaper(el) {
+  const w = S.paper === '58' ? '48mm' : '72mm', f = S.paper === '58' ? '10.5px' : '12px';
+  el.style.setProperty('--pw', w); el.style.setProperty('--pfs', f);
+}
+
+/* Draws a spec onto a white canvas `W` dots wide (384 = 58mm, 576 = 80mm at 203 dpi). */
+function specToCanvas(spec, W) {
+  const base = W >= 576 ? 26 : 22;
+  const SZ = {s: Math.round(base * .86), m: base, l: Math.round(base * 1.3), xl: Math.round(base * 2.6)};
+  const pad = Math.round(base * .4), inner = W - pad * 2;
+  const fam = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
+  const fontOf = r => `${r.b ? 700 : 500} ${SZ[r.sz || 'm']}px ${fam}`;
+  const mc = document.createElement('canvas').getContext('2d');
+  const wrap = (text, maxW) => {
+    const out = []; let line = '';
+    String(text).split(/\s+/).filter(Boolean).forEach(word => {
+      const tryL = line ? line + ' ' + word : word;
+      if (mc.measureText(tryL).width <= maxW) { line = tryL; return; }
+      if (line) out.push(line);
+      line = '';
+      let piece = '';
+      for (const ch of word) { if (mc.measureText(piece + ch).width > maxW && piece) { out.push(piece); piece = ''; } piece += ch; }
+      line = piece;
+    });
+    if (line || !out.length) out.push(line);
+    return out;
+  };
+  const ops = []; let y = pad;
+  spec.forEach(r => {
+    if (r.k === 'hr') { ops.push({hr: Math.round(y + base * .45)}); y += Math.round(base * .9); return; }
+    if (r.k === 'gap') { y += base; return; }
+    const font = fontOf(r); mc.font = font;
+    const lh = Math.round(SZ[r.sz || 'm'] * 1.28);
+    if (r.k === 'c') { wrap(r.t, inner).forEach(t => { ops.push({font, t, x: W / 2, y, a: 'center'}); y += lh; }); return; }
+    if (r.k === 't') { const ind = r.ind ? Math.round(base * 1.1) : 0; wrap(r.t, inner - ind).forEach(t => { ops.push({font, t, x: pad + ind, y, a: 'left'}); y += lh; }); return; }
+    const rw = r.r ? mc.measureText(r.r).width : 0;
+    const lines = wrap(r.l || '', Math.max(40, inner - rw - base * .6));
+    lines.forEach((t, i) => { ops.push({font, t, x: pad, y, a: 'left'}); if (i === 0 && r.r) ops.push({font, t: r.r, x: W - pad, y, a: 'right'}); y += lh; });
+  });
+  const H = Math.ceil(y + pad);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#000'; c.strokeStyle = '#000'; c.textBaseline = 'top';
+  ops.forEach(o => {
+    if (o.hr != null) { c.save(); c.setLineDash([8, 6]); c.lineWidth = 2; c.beginPath(); c.moveTo(pad, o.hr); c.lineTo(W - pad, o.hr); c.stroke(); c.restore(); return; }
+    c.font = o.font; c.textAlign = o.a; c.fillText(o.t, o.x, o.y);
+  });
+  return cv;
+}
+
+/* ESC/POS raster bitmap (GS v 0), sent in 96-row bands so small printer buffers keep up. */
+function canvasToEscPos(cv) {
+  const W = cv.width, H = cv.height, bpr = W >> 3;
+  const px = cv.getContext('2d').getImageData(0, 0, W, H).data;
+  const parts = [new Uint8Array([0x1b, 0x40])];
+  for (let y0 = 0; y0 < H; y0 += 96) {
+    const h = Math.min(96, H - y0);
+    const out = new Uint8Array(8 + bpr * h);
+    out.set([0x1d, 0x76, 0x30, 0x00, bpr & 255, bpr >> 8, h & 255, h >> 8]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < W; x++) {
+      const i = ((y0 + y) * W + x) * 4;
+      if (px[i] * .299 + px[i + 1] * .587 + px[i + 2] * .114 < 150) out[8 + y * bpr + (x >> 3)] |= 0x80 >> (x & 7);
+    }
+    parts.push(out);
+  }
+  parts.push(new Uint8Array([0x1b, 0x64, 0x04]));
+  if (S.cutPaper) parts.push(new Uint8Array([0x1d, 0x56, 0x42, 0x00]));
+  const len = parts.reduce((a, p) => a + p.length, 0), all = new Uint8Array(len);
+  let o = 0; parts.forEach(p => { all.set(p, o); o += p.length; });
+  return all;
+}
+
+/* ---------- Bluetooth LE printer ---------- */
+const BT = {device: null, ch: null, noResp: false, busy: Promise.resolve()};
+const BT_SERVICES = [0x18f0, 0xff00, 0xffe0, 0xfee7, 0xae30, 0xae3a, 0xff12,
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '49535343-fe7d-4ae5-8fa9-9fafd205e455', '0000fff0-0000-1000-8000-00805f9b34fb'];
+function btConnect() {
+  if (!hasBT) return Promise.reject(new Error('nobt'));
+  return navigator.bluetooth.requestDevice({acceptAllDevices: true, optionalServices: BT_SERVICES}).then(async device => {
+    BT.device = device; BT.ch = null;
+    device.addEventListener('gattserverdisconnected', () => { BT.ch = null; renderPrinter(); });
+    await btAttach();
+    toast('Connected to ' + (device.name || 'printer'));
+    renderPrinter();
+  });
+}
+async function btAttach() {
+  const server = BT.device.gatt.connected ? BT.device.gatt : await BT.device.gatt.connect();
+  let svcs = [];
+  try { svcs = await server.getPrimaryServices(); } catch (e) { /* some browsers need explicit UUIDs */ }
+  if (!svcs.length) for (const u of BT_SERVICES) { try { svcs.push(await server.getPrimaryService(u)); } catch (e) {} }
+  for (const s of svcs) {
+    let chars = []; try { chars = await s.getCharacteristics(); } catch (e) { continue; }
+    const c = chars.find(c => c.properties.writeWithoutResponse) || chars.find(c => c.properties.write);
+    if (c) { BT.ch = c; BT.noResp = !!c.properties.writeWithoutResponse; return; }
+  }
+  throw new Error('nochar');
+}
+async function btWrite(bytes) {
+  if (!BT.ch) { if (!BT.device) throw new Error('notconnected'); await btAttach(); }
+  const size = S.btSlow ? 20 : 120, gap = S.btSlow ? 25 : 6;
+  for (let i = 0; i < bytes.length; i += size) {
+    const chunk = bytes.slice(i, i + size);
+    if (BT.noResp && BT.ch.writeValueWithoutResponse) await BT.ch.writeValueWithoutResponse(chunk);
+    else if (BT.ch.writeValueWithResponse) await BT.ch.writeValueWithResponse(chunk);
+    else await BT.ch.writeValue(chunk);
+    if (gap) await sleep(gap);
+  }
+}
+function btError(e) {
+  const n = e && (e.message || e.name);
+  if (e && e.name === 'NotFoundError') return 'No printer was selected.';
+  if (n === 'nobt') return 'This browser can’t use Bluetooth. On iPhone, open the POS in the Bluefy app.';
+  if (n === 'nochar') return 'That device doesn’t accept print data over Bluetooth LE.';
+  if (n === 'notconnected') return 'Printer not connected. Go to Settings → Connect printer.';
+  return 'Printing failed. Check the printer is on and close by, then try again.';
+}
+function printBluetooth(specs) {
+  let ready = Promise.resolve();
+  if (!BT.device) ready = btConnect();             // called inside the tap, so the chooser is allowed
+  const job = BT.busy.then(() => ready).then(async () => {
+    const dots = S.paper === '58' ? 384 : 576;
+    for (const s of specs) await btWrite(canvasToEscPos(specToCanvas(s, dots)));
+  });
+  BT.busy = job.catch(() => {});
+  job.then(() => toast('Printed'), e => toast(btError(e), 4000));
+}
+
+/* ---------- Share sheet (AirPrint, printer apps, Save Image) ---------- */
+function canvasFile(cv, name) {
+  const d = cv.toDataURL('image/png'), bin = atob(d.split(',')[1]), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new File([u], name, {type: 'image/png'});
+}
+function printShare(specs, name) {
+  const files = specs.map((s, i) => canvasFile(specToCanvas(s, 576), `${name}${specs.length > 1 ? '-' + (i + 1) : ''}.png`));
+  if (navigator.canShare && navigator.canShare({files})) {
+    navigator.share({files}).catch(e => { if (e && e.name !== 'AbortError') printDialog(specs); });
+  } else printDialog(specs);
+}
+
+/* ---------- System print dialog ---------- */
+function printDialog(specs) {
+  const area = $('#print-area');
+  area.innerHTML = specs.map(s => `<section class="pg">${specToHTML(s)}</section>`).join('');
+  previewPaper(area);
+  setTimeout(() => { try { window.print(); } catch (e) { toast('Printing isn’t available here.'); } }, 60);
+}
+
+function printSpecs(specs, name) {
+  if (!specs.length) return;
+  if (S.printMode === 'bluetooth') printBluetooth(specs);
+  else if (S.printMode === 'share') printShare(specs, name);
+  else printDialog(specs);
+}
+function printOrder(o, which) {
+  const specs = [];
+  if (which.receipt) specs.push(receiptSpec(o));
+  if (which.barista) specs.push(baristaSpec(o));
+  printSpecs(specs, 'order-' + pad3(o.no));
+}
+
+/* ================= header + nav ================= */
+function renderHeader() {
+  $('#brandName').textContent = S.shopName || 'Coffee POS';
+  const t = today();
+  const os = ORDERS.filter(o => !o.voided && dkey(o.ts) === t);
+  $('#todayNet').textContent = moneyShort(os.reduce((a, o) => a + o.total, 0));
+  $('#todayCount').textContent = 'today · ' + os.length + (os.length === 1 ? ' order' : ' orders');
+}
+let view = 'register';
+function go(v) {
+  view = v;
+  $$('#tabs button').forEach(b => b.dataset.view === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  $$('main > .view').forEach(s => { s.hidden = s.id !== 'v-' + v; });
+  closeSheet();
+  window.scrollTo(0, 0);
+  ({register: renderRegister, orders: renderOrders, report: renderReport, menu: renderMenu, settings: renderSettings})[v]();
+  renderOrderBar();
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) go(b.dataset.view); });
+const hh = () => document.documentElement.style.setProperty('--hh', $('#topbar').offsetHeight + 'px');
+if (window.ResizeObserver) new ResizeObserver(hh).observe($('#topbar'));
+
+/* ================= register ================= */
+let activeCat = 'All', query = '';
+function renderRegister() { renderCats(); renderGrid(); renderTicket(); }
+function renderCats() {
+  const cats = ['All', ...new Set(MENU.map(m => m.cat || 'Other'))];
+  if (!cats.includes(activeCat)) activeCat = 'All';
+  $('#cats').innerHTML = cats.map(c => `<button class="chip ${c === activeCat ? 'on' : ''}" data-cat="${esc(c)}" type="button">${esc(c)}</button>`).join('');
+}
+function renderGrid() {
+  if (!MENU.length) { $('#grid').innerHTML = '<div class="empty">Your menu is empty. Add items in the Menu tab.</div>'; return; }
+  const q = query.trim().toLowerCase();
+  const inCart = {}; cart.lines.forEach(l => { inCart[l.itemId] = (inCart[l.itemId] || 0) + l.qty; });
+  const items = MENU.filter(m => (activeCat === 'All' || (m.cat || 'Other') === activeCat) && (!q || m.name.toLowerCase().includes(q)));
+  $('#grid').innerHTML = items.length ? items.map(m => {
+    const min = Math.min(...m.variants.map(v => v.price));
+    const sizes = m.variants.length > 1 ? m.variants.map(v => esc(v.label)).join(' / ') : esc(m.variants[0].label || '');
+    return `<button class="tile" data-id="${m.id}" type="button">${inCart[m.id] ? `<span class="badge">${inCart[m.id]}</span>` : ''}
+      <span class="t-name">${esc(m.name)}</span><span class="t-price"><b>${m.variants.length > 1 ? 'from ' : ''}${moneyShort(min)}</b><span>${sizes}</span></span></button>`;
+  }).join('') : `<div class="empty">No items match “${esc(query)}”.</div>`;
+}
+$('#cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; activeCat = b.dataset.cat; renderCats(); renderGrid(); });
+$('#search').addEventListener('input', e => { query = e.target.value; renderGrid(); });
+$('#grid').addEventListener('click', e => {
+  const b = e.target.closest('.tile'); if (!b) return;
+  const item = MENU.find(m => m.id === b.dataset.id); if (!item) return;
+  if (item.variants.length === 1 && !(item.addons && ADDONS.length)) {
+    const v = item.variants[0];
+    pushLine({itemId: item.id, name: item.name, variant: v.label, price: v.price, addons: [], qty: 1, note: ''});
+  } else openItemModal(item, null);
+});
+
+const sig = l => [l.itemId, l.variant, l.addons.map(a => a.id).join('+'), l.note].join('|');
+function pushLine(line) {
+  const s = sig(line);
+  const ex = cart.lines.find(l => sig(l) === s);
+  if (ex) ex.qty += line.qty; else cart.lines.push(line);
+  saveCart(); renderTicket(); renderGrid();
+  const tile = $(`.tile[data-id="${line.itemId}"]`);
+  if (tile) { tile.classList.add('flash'); setTimeout(() => tile.classList.remove('flash'), 240); }
+}
+
+function openSheet() { ticketEl.classList.add('open'); syncLock(); renderOrderBar(); }
+function closeSheet() { ticketEl.classList.remove('open'); syncLock(); renderOrderBar(); }
+$('#sheetClose').addEventListener('click', closeSheet);
+$('#orderBar').addEventListener('click', openSheet);
+wideMQ.addEventListener && wideMQ.addEventListener('change', () => { syncLock(); renderOrderBar(); });
+
+function renderOrderBar() {
+  const count = cart.lines.reduce((a, l) => a + l.qty, 0);
+  $('#orderBar').hidden = !count || view !== 'register' || ticketEl.classList.contains('open');
+  $('#obN').textContent = count;
+  $('#obT').textContent = money(totals(cart).total);
+}
+function renderTicket() {
+  $('#nextNo').textContent = '#' + pad3(peekNo());
+  if (document.activeElement !== $('#customer')) $('#customer').value = cart.customer;
+  $('#lines').innerHTML = cart.lines.length ? cart.lines.map((l, i) => `
+    <div class="line">
+      <button class="l-main" data-act="edit" data-i="${i}" type="button">
+        <div class="l-name">${esc(l.name)} ${l.variant ? `<span class="l-var">${esc(l.variant)}</span>` : ''}</div>
+        ${l.addons.length ? `<div class="l-mods">${l.addons.map(a => '+ ' + esc(a.name)).join(' · ')}</div>` : ''}
+        ${l.note ? `<div class="l-note">${esc(l.note)}</div>` : ''}
+      </button>
+      <div class="l-amt">${money(lineTotal(l))}</div>
+      <div class="l-ctl"><span class="unit">${money(lineUnit(l))} each</span>
+        <div class="qty"><button data-act="dec" data-i="${i}" type="button" aria-label="One less">−</button><span>${l.qty}</span><button data-act="inc" data-i="${i}" type="button" aria-label="One more">+</button></div></div>
+    </div>`).join('') : '<div class="t-empty">Tap an item to start an order.</div>';
+  const d = cart.discount;
+  const mode = d.kind === 'none' ? 'none' : (d.label === 'SC/PWD 20%' ? 'sc' : 'custom');
+  $('#discChips').innerHTML = '<span class="label" style="flex:none;margin-right:2px">Discount</span>' +
+    [['none', 'None'], ['sc', 'SC/PWD 20%'], ['custom', mode === 'custom' ? d.label : 'Custom']]
+    .map(([k, l]) => `<button class="chip ${mode === k ? 'on' : ''}" data-disc="${k}" type="button">${esc(l)}</button>`).join('');
+  const t = totals(cart);
+  $('#tSub').textContent = money(t.sub);
+  $('#discLine').hidden = !t.disc;
+  $('#tDiscLbl').textContent = d.label || 'Discount';
+  $('#tDisc').textContent = '−' + money(t.disc);
+  $('#tTotal').textContent = money(t.total);
+  $('#charge').disabled = !cart.lines.length;
+  $('#charge').textContent = cart.lines.length ? 'Charge ' + money(t.total) : 'Charge';
+  renderOrderBar();
+}
+$('#lines').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const i = +b.dataset.i, l = cart.lines[i]; if (!l) return;
+  if (b.dataset.act === 'inc') l.qty++;
+  else if (b.dataset.act === 'dec') { l.qty--; if (l.qty < 1) cart.lines.splice(i, 1); }
+  else {
+    const item = MENU.find(m => m.id === l.itemId) || {id: l.itemId, name: l.name, cat: '', variants: [{label: l.variant, price: l.price}], addons: true};
+    openItemModal(item, i); return;
+  }
+  saveCart(); renderTicket(); renderGrid();
+});
+$('#customer').addEventListener('input', e => { cart.customer = e.target.value; saveCart(); });
+$('#customer').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('#clearCart').addEventListener('click', async () => {
+  if (!cart.lines.length && !cart.customer) { closeSheet(); return; }
+  if (await confirmBox({title: 'Clear this order?', body: 'All items in the current order will be removed.', ok: 'Clear order', danger: true})) {
+    cart = emptyCart(); saveCart(); renderTicket(); renderGrid(); closeSheet();
+  }
+});
+$('#discChips').addEventListener('click', e => {
+  const b = e.target.closest('[data-disc]'); if (!b) return;
+  const k = b.dataset.disc;
+  if (k === 'none') cart.discount = {kind: 'none', value: 0, label: ''};
+  else if (k === 'sc') cart.discount = {kind: 'pct', value: 20, label: 'SC/PWD 20%'};
+  else { openDiscountModal(); return; }
+  saveCart(); renderTicket();
+});
+$('#charge').addEventListener('click', openPay);
+
+function openDiscountModal() {
+  const d = cart.discount.kind !== 'none' && cart.discount.label !== 'SC/PWD 20%' ? cart.discount : {kind: 'pct', value: 10, label: 'Promo'};
+  const m = openModal(`<h2>Custom discount</h2>
+    <div class="field"><div class="label">Type</div><div class="seg" id="dKind"><button type="button" data-k="pct">Percent</button><button type="button" data-k="amt">Fixed ${esc(S.currency)}</button></div></div>
+    <div class="field"><label class="label" for="dVal">Value</label><input id="dVal" type="number" min="0" step="0.01" inputmode="decimal" value="${d.value}"></div>
+    <div class="field"><label class="label" for="dLbl">Label on receipt</label><input id="dLbl" value="${esc(d.label)}" autocomplete="off"></div>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="dOk" type="button">Apply</button></div>`);
+  let kind = d.kind;
+  const upd = () => $$('#dKind button', m).forEach(b => b.classList.toggle('on', b.dataset.k === kind));
+  $('#dKind', m).onclick = e => { const b = e.target.closest('[data-k]'); if (b) { kind = b.dataset.k; upd(); } };
+  upd();
+  m.querySelector('#dOk').onclick = () => {
+    let value = Math.max(0, parseFloat($('#dVal', m).value) || 0);
+    if (kind === 'pct') value = Math.min(100, value);
+    const label = $('#dLbl', m).value.trim() || (kind === 'pct' ? value + '% off' : 'Discount');
+    cart.discount = value ? {kind, value, label} : {kind: 'none', value: 0, label: ''};
+    saveCart(); renderTicket(); closeModal();
+  };
+}
+
+function openItemModal(item, editIndex) {
+  const ex = editIndex != null ? cart.lines[editIndex] : null;
+  let vi = ex ? Math.max(0, item.variants.findIndex(v => v.label === ex.variant)) : 0;
+  const sel = new Set(ex ? ex.addons.map(a => a.id) : []);
+  let qty = ex ? ex.qty : 1;
+  const showAddons = item.addons && ADDONS.length;
+  const m = openModal(`
+    <div class="m-head"><h2>${esc(item.name)}</h2><span class="muted">${esc(item.cat || '')}</span></div>
+    ${item.variants.length > 1 ? `<div class="field"><div class="label">Size</div><div class="seg" id="mVar">${item.variants.map((v, i) =>
+      `<button type="button" data-i="${i}">${esc(v.label || 'Regular')}<small>${moneyShort(v.price)}</small></button>`).join('')}</div></div>` : ''}
+    ${showAddons ? `<div class="field"><div class="label">Add-ons</div><div class="chips" id="mAdd">${ADDONS.map(a =>
+      `<button type="button" class="chip" data-id="${a.id}">${esc(a.name)}${a.price ? ` <small>+${moneyShort(a.price)}</small>` : ''}</button>`).join('')}</div></div>` : ''}
+    <div class="field"><label class="label" for="mNote">Note for barista</label><input id="mNote" placeholder="e.g. less ice, extra hot" value="${esc(ex ? ex.note : '')}" autocomplete="off" enterkeyhint="done"></div>
+    <div class="m-foot"><div class="qty lg"><button type="button" id="mDec" aria-label="One less">−</button><span id="mQty"></span><button type="button" id="mInc" aria-label="One more">+</button></div>
+      <button class="primary" id="mOk" type="button"></button></div>
+    ${ex ? '<div class="m-actions"><button class="ghost danger-text sm" id="mRm" type="button">Remove from order</button></div>' : ''}`);
+  const upd = () => {
+    $$('#mVar button', m).forEach((b, i) => b.classList.toggle('on', i === vi));
+    $$('#mAdd .chip', m).forEach(b => b.classList.toggle('on', sel.has(b.dataset.id)));
+    const unit = item.variants[vi].price + ADDONS.filter(a => sel.has(a.id)).reduce((a, x) => a + x.price, 0);
+    $('#mQty', m).textContent = qty;
+    $('#mOk', m).textContent = (ex ? 'Update · ' : 'Add · ') + money(unit * qty);
+  };
+  m.addEventListener('click', e => {
+    const v = e.target.closest('#mVar button'); if (v) { vi = +v.dataset.i; upd(); return; }
+    const a = e.target.closest('#mAdd .chip'); if (a) { sel.has(a.dataset.id) ? sel.delete(a.dataset.id) : sel.add(a.dataset.id); upd(); return; }
+    if (e.target.closest('#mDec')) { qty = Math.max(1, qty - 1); upd(); }
+    if (e.target.closest('#mInc')) { qty++; upd(); }
+  });
+  const commit = () => {
+    const v = item.variants[vi];
+    const line = {itemId: item.id, name: item.name, variant: v.label, price: v.price,
+      addons: ADDONS.filter(a => sel.has(a.id)).map(a => ({id: a.id, name: a.name, price: a.price})), qty, note: $('#mNote', m).value.trim()};
+    closeModal();
+    if (ex) { cart.lines[editIndex] = line; saveCart(); renderTicket(); renderGrid(); } else pushLine(line);
+  };
+  $('#mOk', m).onclick = commit;
+  $('#mNote', m).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+  if (ex) $('#mRm', m).onclick = () => { cart.lines.splice(editIndex, 1); saveCart(); renderTicket(); renderGrid(); closeModal(); };
+  upd();
+}
+
+/* ================= checkout ================= */
+function openPay() {
+  if (!cart.lines.length) return;
+  const t = totals(cart);
+  const methods = S.methods.split(',').map(s => s.trim()).filter(Boolean);
+  if (!methods.length) methods.push('Cash');
+  let method = methods[0];
+  const quick = [...new Set([t.total, Math.ceil(t.total / 50) * 50, Math.ceil(t.total / 100) * 100, 500, 1000].filter(v => v >= t.total).map(r2))]
+    .sort((a, b) => a - b).slice(0, 5);
+  const m = openModal(`
+    <div class="pay-total"><div class="eyebrow">Amount due · Order #${pad3(peekNo())}</div><div class="big-amt">${money(t.total)}</div></div>
+    <div class="field"><div class="label">Payment method</div><div class="seg" id="pM">${methods.map(x => `<button type="button" data-m="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>
+    <div id="pCash" class="field">
+      <div class="label">Cash received</div>
+      <div class="chips">${quick.map((v, i) => `<button type="button" class="chip" data-q="${v}">${i === 0 && v === t.total ? 'Exact' : moneyShort(v)}</button>`).join('')}</div>
+      <input id="pTend" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Other amount" aria-label="Cash received">
+      <div class="change-row" id="pChgRow"><span id="pChgLbl">Change</span><strong id="pChg">—</strong></div>
+    </div>
+    <div id="pRef" class="field" hidden><label class="label" for="pRefIn">Reference no. (optional)</label><input id="pRefIn" autocomplete="off" inputmode="numeric" enterkeyhint="done"></div>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Back</button><button class="primary" id="pDone" type="button">Complete sale</button></div>`);
+  const tend = $('#pTend', m);
+  const upd = () => {
+    $$('#pM button', m).forEach(b => b.classList.toggle('on', b.dataset.m === method));
+    $$('[data-q]', m).forEach(b => b.classList.toggle('on', tend.value !== '' && r2(+tend.value) === r2(+b.dataset.q)));
+    const cash = isCash(method);
+    $('#pCash', m).hidden = !cash; $('#pRef', m).hidden = cash;
+    let ok = true;
+    if (cash) {
+      const v = parseFloat(tend.value), row = $('#pChgRow', m);
+      if (isNaN(v)) { $('#pChg', m).textContent = '—'; $('#pChgLbl', m).textContent = 'Change'; row.classList.remove('short'); ok = false; }
+      else if (r2(v) < t.total) { $('#pChgLbl', m).textContent = 'Short by'; $('#pChg', m).textContent = money(t.total - v); row.classList.add('short'); ok = false; }
+      else { $('#pChgLbl', m).textContent = 'Change'; $('#pChg', m).textContent = money(v - t.total); row.classList.remove('short'); }
+    }
+    $('#pDone', m).disabled = !ok;
+  };
+  m.addEventListener('click', e => {
+    const b = e.target.closest('#pM button'); if (b) { method = b.dataset.m; upd(); return; }
+    const q = e.target.closest('[data-q]'); if (q) { tend.value = q.dataset.q; tend.blur(); upd(); }
+  });
+  tend.addEventListener('input', upd);
+  tend.addEventListener('keydown', e => { if (e.key === 'Enter') tend.blur(); });
+  $('#pDone', m).onclick = () => {
+    if ($('#pDone', m).disabled) return;
+    const cash = isCash(method);
+    completeSale(method, cash ? r2(parseFloat(tend.value)) : t.total, cash ? '' : $('#pRefIn', m).value.trim());
+  };
+  upd();
+}
+
+/* Runs inside the "Complete sale" tap, so the share sheet / Bluetooth chooser may open. */
+function completeSale(method, tendered, ref) {
+  const t = totals(cart);
+  const o = {id: uid(), no: takeNo(), ts: Date.now(), customer: cart.customer.trim(),
+    lines: JSON.parse(JSON.stringify(cart.lines)), sub: t.sub, disc: t.disc, discLabel: t.disc ? cart.discount.label : '',
+    total: t.total, method, tendered, change: isCash(method) ? r2(tendered - t.total) : 0, ref, voided: false};
+  ORDERS.push(o); saveOrders();
+  cart = emptyCart(); saveCart();
+  closeModal(); closeSheet();
+  renderTicket(); renderGrid(); renderHeader();
+  showDone(o);
+  if (S.autoPrint || S.baristaTicket) printOrder(o, {receipt: S.autoPrint, barista: S.baristaTicket});
+}
+function showDone(o) {
+  const cash = isCash(o.method);
+  const m = openModal(`
+    <div class="done"><div class="eyebrow">Order #${pad3(o.no)} saved${o.customer ? ' · ' + esc(o.customer) : ''}</div>
+      ${cash ? `<div class="label">Change</div><div class="big-amt">${money(o.change)}</div><div class="muted">${money(o.tendered)} cash received</div>`
+             : `<div class="big-amt">${money(o.total)}</div><div class="muted">Paid via ${esc(o.method)}</div>`}</div>
+    <div class="paper" id="dPaper">${specToHTML(receiptSpec(o))}</div>
+    <div class="m-actions stack"><button class="ghost" id="dRcpt" type="button">Print receipt</button><button class="ghost" id="dBar" type="button">Barista ticket</button>
+      <button class="primary" data-close type="button">New order</button></div>`, true);
+  previewPaper($('#dPaper', m));
+  $('#dRcpt', m).onclick = () => printOrder(o, {receipt: true});
+  $('#dBar', m).onclick = () => printOrder(o, {barista: true});
+}
+
+/* ================= orders ================= */
+function renderOrders() {
+  const di = $('#oDate'); if (!di.value) di.value = today();
+  const k = di.value;
+  const os = ORDERS.filter(o => dkey(o.ts) === k).sort((a, b) => b.ts - a.ts);
+  const valid = os.filter(o => !o.voided);
+  $('#oSummary').textContent = `${fmtKey(k)} · ${valid.length} sale${valid.length === 1 ? '' : 's'} · ${money(valid.reduce((a, o) => a + o.total, 0))}` +
+    (os.length - valid.length ? ` · ${os.length - valid.length} voided` : '');
+  $('#oList').innerHTML = os.length ? os.map(o => `
+    <button class="o-row ${o.voided ? 'void' : ''}" data-id="${o.id}" type="button">
+      <span class="o-no">#${pad3(o.no)}<small>${fmtTime(o.ts)}</small></span>
+      <span class="o-items">${o.customer ? `<b>${esc(o.customer)}</b> · ` : ''}${esc(o.lines.map(l => l.qty + '× ' + l.name).join(', '))}
+        ${o.voided ? ' <span class="pill">Voided</span>' : ''}</span>
+      <span class="o-amt">${money(o.total)}<small>${esc(o.method)}</small></span>
+    </button>`).join('') : '<div class="empty">No orders on this day.</div>';
+}
+$('#oDate').addEventListener('change', renderOrders);
+$('#oList').addEventListener('click', e => {
+  const b = e.target.closest('.o-row'); if (!b) return;
+  const o = ORDERS.find(x => x.id === b.dataset.id); if (!o) return;
+  const m = openModal(`<div class="m-head"><h2>Order #${pad3(o.no)}</h2><span class="muted">${fmtTime(o.ts)}</span></div>
+    <div class="paper" id="vPaper">${specToHTML(receiptSpec(o))}</div>
+    <div class="m-actions stack"><button class="ghost" id="vBar" type="button">Barista ticket</button>
+      ${o.voided ? '<span></span>' : '<button class="ghost danger-text" id="vVoid" type="button">Void order</button>'}
+      <button class="primary" id="vPrint" type="button">Reprint receipt</button></div>`, true);
+  previewPaper($('#vPaper', m));
+  $('#vPrint', m).onclick = () => printOrder(o, {receipt: true});
+  $('#vBar', m).onclick = () => printOrder(o, {barista: true});
+  if (!o.voided) $('#vVoid', m).onclick = async () => {
+    if (await confirmBox({title: `Void order #${pad3(o.no)}?`, body: `${money(o.total)} will be removed from sales totals. The order stays in the list, marked voided.`, ok: 'Void order', danger: true})) {
+      o.voided = true; o.voidedAt = Date.now(); saveOrders(); renderOrders(); renderHeader(); toast(`Order #${pad3(o.no)} voided`);
+    }
+  };
+});
+
+/* ================= report ================= */
+function computeReport(from, to) {
+  const os = ORDERS.filter(o => { const k = dkey(o.ts); return k >= from && k <= to; });
+  const valid = os.filter(o => !o.voided);
+  const r = {count: valid.length, voided: os.length - valid.length, gross: 0, disc: 0, net: 0, methods: {}, items: {}};
+  valid.forEach(o => {
+    r.gross += o.sub; r.disc += o.disc; r.net += o.total;
+    const mm = r.methods[o.method] = r.methods[o.method] || {n: 0, amt: 0}; mm.n++; mm.amt += o.total;
+    o.lines.forEach(l => {
+      const key = l.name + (l.variant ? ' ' + l.variant : '');
+      const it = r.items[key] = r.items[key] || {qty: 0, amt: 0}; it.qty += l.qty; it.amt += lineTotal(l);
+    });
+  });
+  r.avg = r.count ? r.net / r.count : 0;
+  r.itemList = Object.entries(r.items).sort((a, b) => b[1].qty - a[1].qty || b[1].amt - a[1].amt);
+  r.methodList = Object.entries(r.methods).sort((a, b) => b[1].amt - a[1].amt);
+  return r;
+}
+function rangeLabel(f, t) { return f === t ? fmtKey(f) : fmtKey(f) + ' – ' + fmtKey(t); }
+function renderReport() {
+  const f = $('#rFrom'), t = $('#rTo');
+  if (!f.value) f.value = today(); if (!t.value) t.value = today();
+  if (t.value < f.value) t.value = f.value;
+  const r = computeReport(f.value, t.value);
+  $('#rRange').textContent = rangeLabel(f.value, t.value) + (r.voided ? ` · ${r.voided} voided excluded` : '');
+  $('#rKpis').innerHTML = [['Net sales', money(r.net)], ['Orders', r.count], ['Average order', money(r.avg)], ['Discounts', money(r.disc)]]
+    .map(([l, v]) => `<div class="card kpi"><span class="eyebrow">${l}</span><span class="v">${v}</span></div>`).join('');
+  $('#rMethods').innerHTML = r.methodList.length
+    ? `<thead><tr><th>Method</th><th class="r">Orders</th><th class="r">Amount</th></tr></thead><tbody>${r.methodList.map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td class="r">${v.n}</td><td class="r">${money(v.amt)}</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td class="r"><b>${r.count}</b></td><td class="r"><b>${money(r.net)}</b></td></tr></tbody>`
+    : '<tbody><tr><td class="muted">No sales in this range.</td></tr></tbody>';
+  $('#rItems').innerHTML = r.itemList.length
+    ? `<thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Sales</th></tr></thead><tbody>${r.itemList.map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td class="r">${v.qty}</td><td class="r">${money(v.amt)}</td></tr>`).join('')}</tbody>`
+    : '<tbody><tr><td class="muted">No items sold in this range.</td></tr></tbody>';
+}
+$('#rFrom').addEventListener('change', renderReport);
+$('#rTo').addEventListener('change', renderReport);
+$('#rPrint').addEventListener('click', () => { const f = $('#rFrom').value, t = $('#rTo').value; printSpecs([reportSpec(f, t, computeReport(f, t))], 'sales-report-' + f); });
+$('#rCsv').addEventListener('click', () => {
+  const f = $('#rFrom').value, t = $('#rTo').value;
+  const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const rows = [['date', 'time', 'order_no', 'customer', 'item', 'size', 'add_ons', 'note', 'qty', 'unit_price', 'line_total', 'order_discount', 'order_total', 'payment', 'reference', 'voided']];
+  ORDERS.filter(o => { const k = dkey(o.ts); return k >= f && k <= t; }).sort((a, b) => a.ts - b.ts).forEach(o => o.lines.forEach((l, i) => rows.push([
+    dkey(o.ts), new Date(o.ts).toTimeString().slice(0, 5), pad3(o.no), o.customer, l.name, l.variant, l.addons.map(a => a.name).join('; '), l.note,
+    l.qty, lineUnit(l).toFixed(2), lineTotal(l).toFixed(2), i ? '' : o.disc.toFixed(2), i ? '' : o.total.toFixed(2), o.method, o.ref || '', o.voided ? 'yes' : ''])));
+  if (rows.length === 1) { toast('No sales in this range to export.'); return; }
+  saveFile(`sales-${f}${f === t ? '' : '_to_' + t}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
+});
+
+/* ================= menu editor ================= */
+function renderMenu() {
+  const groups = {};
+  MENU.forEach(m => { (groups[m.cat || 'Other'] = groups[m.cat || 'Other'] || []).push(m); });
+  $('#mGroups').innerHTML = Object.keys(groups).length ? Object.entries(groups).map(([c, items]) => `
+    <div class="card"><div class="card-h"><h3>${esc(c)}</h3><span class="muted num">${items.length}</span></div>
+      ${items.map(m => `<button class="menu-row" data-id="${m.id}" type="button"><span><b>${esc(m.name)}</b>${m.addons ? ' <span class="muted">· add-ons</span>' : ''}</span>
+        <span class="p">${m.variants.map(v => (v.label ? esc(v.label) + ' ' : '') + moneyShort(v.price)).join('<br>')}</span></button>`).join('')}</div>`).join('')
+    : '<div class="card empty">No items yet. Tap “Add item” to build your menu.</div>';
+  $('#aList').innerHTML = ADDONS.length ? ADDONS.map((a, i) => `<div class="addon-row" data-i="${i}">
+      <input class="an" value="${esc(a.name)}" aria-label="Add-on name"><input class="ap" type="number" min="0" step="0.01" inputmode="decimal" value="${a.price}" aria-label="Add-on price">
+      <button class="icon-btn" data-rm="${i}" type="button" aria-label="Remove ${esc(a.name)}">×</button></div>`).join('')
+    : '<p class="hint" style="padding:0 16px 14px">No add-ons yet.</p>';
+}
+$('#mGroups').addEventListener('click', e => { const b = e.target.closest('.menu-row'); if (b) openItemEditor(MENU.find(m => m.id === b.dataset.id)); });
+$('#mNew').addEventListener('click', () => openItemEditor(null));
+$('#aNew').addEventListener('click', () => { ADDONS.push({id: uid(), name: 'New add-on', price: 0}); saveMenu(); renderMenu(); const ins = $$('#aList .an'); const last = ins[ins.length - 1]; if (last) { last.focus(); last.select(); } });
+$('#aList').addEventListener('change', e => {
+  const row = e.target.closest('.addon-row'); if (!row) return; const a = ADDONS[+row.dataset.i];
+  if (e.target.classList.contains('an')) a.name = e.target.value.trim() || 'Add-on'; else a.price = Math.max(0, parseFloat(e.target.value) || 0);
+  saveMenu();
+});
+$('#aList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; ADDONS.splice(+b.dataset.rm, 1); saveMenu(); renderMenu(); });
+
+function openItemEditor(item) {
+  const isNew = !item;
+  const draft = item ? JSON.parse(JSON.stringify(item)) : {id: uid(), name: '', cat: activeCat !== 'All' ? activeCat : '', variants: [{label: '', price: 0}], addons: false};
+  const cats = [...new Set(MENU.map(m => m.cat).filter(Boolean))];
+  const m = openModal(`<h2>${isNew ? 'Add item' : 'Edit item'}</h2>
+    <div class="field"><label class="label" for="eName">Name</label><input id="eName" value="${esc(draft.name)}" autocomplete="off"></div>
+    <div class="field"><label class="label" for="eCat">Category</label><input id="eCat" value="${esc(draft.cat)}" autocomplete="off">
+      ${cats.length ? `<div class="chips" id="eCats">${cats.map(c => `<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}</div>
+    <div class="field"><div class="label">Sizes and prices</div><div class="vars" id="eVars"></div>
+      <div><button type="button" class="ghost sm" id="eAddVar">Add size</button></div><p class="hint">Leave the size blank for items with a single price.</p></div>
+    <label class="check"><input type="checkbox" id="eAddons" ${draft.addons ? 'checked' : ''}> Offer add-ons for this item</label>
+    <p class="err" id="eErr" hidden></p>
+    <div class="m-actions stack">${isNew ? '' : '<button class="ghost danger-text" id="eDel" type="button">Delete</button>'}
+      <button class="ghost" data-close type="button">Cancel</button><button class="primary" id="eSave" type="button">Save</button></div>`);
+  const rv = () => {
+    $('#eVars', m).innerHTML = draft.variants.map((v, i) => `<div class="var-row" data-i="${i}">
+      <input class="vl" placeholder="Size, e.g. 12 oz" value="${esc(v.label)}" aria-label="Size name">
+      <input class="vp" type="number" min="0" step="0.01" inputmode="decimal" value="${v.price}" aria-label="Price">
+      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Remove size" ${draft.variants.length < 2 ? 'disabled' : ''}>×</button></div>`).join('');
+  };
+  rv();
+  const eCats = $('#eCats', m); if (eCats) eCats.onclick = e => { const b = e.target.closest('[data-c]'); if (b) $('#eCat', m).value = b.dataset.c; };
+  $('#eVars', m).addEventListener('input', e => {
+    const row = e.target.closest('.var-row'); if (!row) return; const v = draft.variants[+row.dataset.i];
+    if (e.target.classList.contains('vl')) v.label = e.target.value; else v.price = parseFloat(e.target.value) || 0;
+  });
+  $('#eVars', m).addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b && !b.disabled) { draft.variants.splice(+b.dataset.rm, 1); rv(); } });
+  $('#eAddVar', m).onclick = () => { draft.variants.push({label: '', price: 0}); rv(); const ls = $$('.vl', m); ls[ls.length - 1].focus(); };
+  $('#eSave', m).onclick = () => {
+    draft.name = $('#eName', m).value.trim(); draft.cat = $('#eCat', m).value.trim() || 'Other'; draft.addons = $('#eAddons', m).checked;
+    draft.variants = draft.variants.map(v => ({label: v.label.trim(), price: Math.max(0, r2(v.price))}));
+    const err = $('#eErr', m);
+    if (!draft.name) { err.textContent = 'Enter a name for this item.'; err.hidden = false; return; }
+    if (draft.variants.length > 1 && draft.variants.some(v => !v.label)) { err.textContent = 'Give each size a name, like 12 oz or 16 oz.'; err.hidden = false; return; }
+    const i = MENU.findIndex(x => x.id === draft.id);
+    if (i >= 0) MENU[i] = draft; else MENU.push(draft);
+    saveMenu(); closeModal(); renderMenu(); toast(isNew ? 'Item added' : 'Item saved');
+  };
+  if (!isNew) $('#eDel', m).onclick = async () => {
+    if (await confirmBox({title: `Delete ${draft.name || 'this item'}?`, body: 'Past orders keep their records. The item just disappears from the register.', ok: 'Delete item', danger: true})) {
+      MENU = MENU.filter(x => x.id !== draft.id); saveMenu(); renderMenu(); toast('Item deleted');
+    }
+  };
+}
+
+/* ================= settings ================= */
+const PM_HINT = {
+  share: 'After each sale the iPhone share sheet opens with the receipt as an image. Tap Print for an AirPrint printer, or choose your printer’s own app.',
+  bluetooth: hasBT ? 'Sends receipts straight to a Bluetooth LE thermal printer (ESC/POS). Turn the printer on, then tap Connect printer.'
+                   : 'This browser can’t reach Bluetooth printers. On iPhone, open this POS’s link in the free Bluefy app instead of Safari. On Android, use Chrome.',
+  dialog: 'Opens the system print dialog. Best on a laptop or iPad with the printer already set up.'
+};
+function renderPrinter() {
+  $$('#pmSeg button').forEach(b => b.classList.toggle('on', b.dataset.pm === S.printMode));
+  $('#pmHint').textContent = PM_HINT[S.printMode] || '';
+  const bt = S.printMode === 'bluetooth';
+  $('#btBox').hidden = !bt || !hasBT;
+  $$('[data-bt-only]').forEach(el => { el.hidden = !bt; });
+  const on = !!(BT.device && BT.ch);
+  $('#btDot').className = 'dot ' + (on ? 'ok' : 'bad');
+  $('#btStatus').textContent = on ? 'Connected to ' + (BT.device.name || 'printer') : (BT.device ? 'Printer disconnected' : 'No printer connected');
+  $('#btConnect').textContent = on ? 'Change printer' : (BT.device ? 'Reconnect' : 'Connect printer');
+}
+async function renderAppStatus() {
+  const rows = [];
+  const http = /^https?:/.test(location.protocol);
+  const sw = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+  rows.push(sw ? ['ok', 'Works offline. The app is saved on this phone.']
+    : http ? ['', 'Open the app once more while online to finish offline setup.']
+    : ['bad', 'Opened as a local file. Put the folder online once (see setup steps) to install it on iPhone.']);
+  if (isIOS) rows.push(isStandalone() ? ['ok', 'Installed on the Home Screen.'] : hasBT ? ['', 'Running in a Bluetooth browser. Bookmark this page for quick access.'] : ['bad', 'Not installed yet. In Safari tap Share, then Add to Home Screen.']);
+  try { if (navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()) rows.push(['ok', 'Storage is protected from automatic clean-up.']); } catch (e) {}
+  rows.push(['', `${ORDERS.length} orders and ${MENU.length} menu items stored.`]);
+  $('#appStatus').innerHTML = rows.map(([c, t]) => `<div class="st"><span class="dot ${c}"></span><span>${esc(t)}</span></div>`).join('');
+}
+function renderSettings() {
+  $$('[data-key]').forEach(el => { const v = S[el.dataset.key]; if (el.type === 'checkbox') el.checked = !!v; else if (document.activeElement !== el) el.value = v ?? ''; });
+  renderPrinter(); renderAppStatus();
+}
+$('#v-settings').addEventListener('input', e => {
+  const el = e.target.closest('[data-key]'); if (!el) return;
+  S[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
+  saveSettings(); renderHeader();
+});
+$('#pmSeg').addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (!b) return; S.printMode = b.dataset.pm; saveSettings(); renderPrinter(); });
+$('#btConnect').addEventListener('click', () => {
+  const p = BT.device && !BT.ch ? btAttach().then(renderPrinter) : btConnect();
+  p.catch(e => { toast(btError(e), 4000); renderPrinter(); });
+});
+$('#testPrint').addEventListener('click', () => {
+  const o = {no: 0, ts: Date.now(), customer: 'Test', method: 'Cash', tendered: 500, ref: '', voided: false, disc: 0, discLabel: '',
+    lines: [{name: 'Café Latte', variant: '16 oz', price: 150, addons: [{name: 'Oat milk', price: 35}], qty: 1, note: 'less ice'}, {name: 'Butter Croissant', variant: '', price: 95, addons: [], qty: 2, note: ''}]};
+  o.sub = o.lines.reduce((a, l) => a + lineTotal(l), 0); o.total = o.sub; o.change = r2(o.tendered - o.total);
+  printSpecs([receiptSpec(o, true)], 'test-receipt');
+});
+$('#dBackup').addEventListener('click', () => {
+  saveFile(`coffee-pos-backup-${today()}.json`, JSON.stringify({app: 'coffee-pos', v: 1, savedAt: new Date().toISOString(), settings: S, menu: MENU, addons: ADDONS, orders: ORDERS, seq: SEQ}), 'application/json');
+});
+$('#dRestore').addEventListener('click', () => $('#dFile').click());
+$('#dFile').addEventListener('change', e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = async () => {
+    let d; try { d = JSON.parse(fr.result); } catch (err) { toast('That file is not a valid backup.'); return; }
+    if (!d || d.app !== 'coffee-pos' || !Array.isArray(d.menu) || !Array.isArray(d.orders)) { toast('That file is not a Coffee Counter POS backup.'); return; }
+    if (await confirmBox({title: 'Restore this backup?', body: `It has ${d.orders.length} orders and ${d.menu.length} menu items, saved ${esc(new Date(d.savedAt).toLocaleString('en-PH'))}. Everything currently on this phone will be replaced.`, ok: 'Restore', danger: true})) {
+      S = Object.assign({}, DEFAULT_SETTINGS, d.settings); MENU = d.menu; ADDONS = d.addons || []; ORDERS = d.orders; SEQ = d.seq || {date: '', n: 0};
+      saveSettings(); saveMenu(); saveOrders(); renderHeader(); renderSettings(); toast('Backup restored');
+    }
+  };
+  fr.readAsText(file);
+});
+$('#dResetMenu').addEventListener('click', async () => {
+  if (await confirmBox({title: 'Replace your menu with the sample?', body: 'Your current items and add-ons will be replaced. Sales are not affected.', ok: 'Replace menu', danger: true})) {
+    MENU = sampleMenu(); ADDONS = sampleAddons(); saveMenu(); renderAppStatus(); toast('Sample menu loaded');
+  }
+});
+$('#dClear').addEventListener('click', async () => {
+  if (await confirmBox({title: 'Delete all sales?', body: `This permanently removes ${ORDERS.length} orders from this phone and restarts order numbers. Save a backup first if you need the records.`, ok: 'Delete all sales', danger: true})) {
+    ORDERS = []; SEQ = {date: '', n: 0}; saveOrders(); renderHeader(); renderAppStatus(); toast('All sales deleted');
+  }
+});
+
+/* ================= boot ================= */
+load();
+if (!storageOK) $('#storageBanner').hidden = false;
+if (isIOS && !isStandalone() && !hasBT && !store.get('installSeen', false) && /^https?:/.test(location.protocol)) $('#installBanner').hidden = false;
+$('#installOk').addEventListener('click', () => { store.set('installSeen', true); $('#installBanner').hidden = true; });
+renderHeader(); hh();
+go('register');
+setInterval(() => { renderHeader(); if (view === 'register') $('#nextNo').textContent = '#' + pad3(peekNo()); }, 30000);
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').then(() => { if (view === 'settings') renderAppStatus(); }).catch(() => {});
+}
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+})();
+</script>
+</body>
+</html>
