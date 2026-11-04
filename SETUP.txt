@@ -23,3 +23,10 @@ COFFEE COUNTER POS - IPHONE SETUP
 UPDATING
    If you change index.html later, also change VERSION in sw.js (e.g. coffee-pos-v2)
    so installed phones pick up the new copy.
+
+INVENTORY (added Nov 2026)
+   - Inventory tab > Count stock: enter what you have on hand once. From then on every sale
+     takes its recipe ingredients out automatically, and a void puts them back.
+   - Tap an ingredient to log "Bought more" (also updates its cost), a recount, or waste.
+   - Menu tab > tap an item > its recipe button to change amounts. Cost and margin update live.
+   - Report tab shows cost of goods, gross profit and ingredients used for any date range.

@@ -1,6 +1,6 @@
 // Keeps Coffee Counter POS working with no internet.
 // Bump VERSION whenever you change index.html so phones pick up the new copy.
-const VERSION = 'coffee-pos-v1';
+const VERSION = 'coffee-pos-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

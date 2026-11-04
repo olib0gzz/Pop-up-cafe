@@ -20,6 +20,7 @@
   --bg:#F1F3EE; --surface:#FFFFFF; --sunk:#E6E9E2; --ink:#1C1F1B; --muted:#646A61; --line:#D7DBD1;
   --accent:#1E6B57; --accent-ink:#FFFFFF; --accent-soft:#DDEDE6;
   --danger:#B42318; --danger-ink:#FFFFFF; --danger-soft:#FBE5E2; --shade:rgba(12,16,12,.48);
+  --warn:#8A5200; --warn-soft:#FBEFD9;
   --ui: -apple-system,system-ui,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono: ui-monospace,"SF Mono",Menlo,Consolas,"Courier New",monospace;
   --r:12px; --tb:58px; --hh:56px;
@@ -30,11 +31,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#111411; --surface:#1A1E1A; --sunk:#252A25; --ink:#ECEFE8; --muted:#9AA196; --line:#30362F;
   --accent:#5DC09F; --accent-ink:#0A1913; --accent-soft:#1B3A2F;
-  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); color-scheme:dark}}
+  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); --warn:#F2B860; --warn-soft:#3A2E17; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#111411; --surface:#1A1E1A; --sunk:#252A25; --ink:#ECEFE8; --muted:#9AA196; --line:#30362F;
   --accent:#5DC09F; --accent-ink:#0A1913; --accent-soft:#1B3A2F;
-  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); color-scheme:dark}
+  --danger:#F08A7E; --danger-ink:#2A0E0A; --danger-soft:#3A1E1B; --shade:rgba(0,0,0,.62); --warn:#F2B860; --warn-soft:#3A2E17; color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
@@ -97,7 +98,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:var(--sat);backgrou
 .banner.info{background:var(--accent-soft);color:var(--ink)}
 main{padding-bottom:calc(var(--tb) + var(--sab) + 84px)}
 
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:var(--sab);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:var(--tb);border:0;background:none;color:var(--muted);font-size:11px;font-weight:650}
 .tabbar svg{width:24px;height:24px}
@@ -225,7 +226,7 @@ tr:last-child td{border-bottom:0}
 th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
 .r{text-align:right}
 .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-@media (min-width:700px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:700px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis.four{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .kpi{padding:14px 16px;display:grid;gap:4px}
 .kpi .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;overflow-wrap:anywhere}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
@@ -244,7 +245,8 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
 .menu-row:active{background:var(--sunk)}
 .menu-row:last-child{border-bottom:0}
 .menu-row .p{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;text-align:right}
-.addon-row{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);align-items:center}
+.addon-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
+.addon-row .rec-btn{grid-column:1/-1}
 .form{display:grid;gap:14px;padding:6px 16px 16px}
 .form-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .status{display:grid;gap:10px}
@@ -258,6 +260,62 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
   padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:opacity .2s,transform .2s;pointer-events:none;z-index:80;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- Costing & inventory ---------- */
+.t-top{display:grid;gap:6px}
+.t-stock{justify-self:start;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
+.t-stock.out{background:var(--danger-soft);color:var(--danger)}
+.tile.is-out{opacity:.62}
+.menu-row .p{display:grid;gap:3px;justify-items:end;align-content:start}
+.menu-row .mv{color:var(--ink);font-weight:600;white-space:nowrap}
+.menu-row .mc{font-size:12px;color:var(--muted);white-space:nowrap}
+.menu-row .mc.none{color:var(--warn)}
+.var-block{display:grid;gap:6px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.rec-btn{justify-self:start;max-width:100%;border:1px dashed var(--accent);background:var(--bg);border-radius:9px;padding:7px 11px;font-size:13px;font-weight:650;color:var(--accent);text-align:left;font-variant-numeric:tabular-nums}
+.rec-btn.set{border-style:solid;border-color:var(--line);color:var(--ink)}
+.rec-row{display:grid;grid-template-columns:minmax(0,1fr) 78px 44px 44px;gap:4px 8px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.rec-row .ru{font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-row .rc{grid-column:1/-1;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cost-sum{display:grid;gap:6px;background:var(--sunk);border-radius:12px;padding:12px 14px}
+.cost-sum .b{font-weight:800}
+.neg{color:var(--danger)}
+.pos{color:var(--accent)}
+.warn-text{color:var(--warn)}
+.pill.low{background:var(--warn-soft);color:var(--warn)}
+.pill.nc{background:var(--sunk);color:var(--muted)}
+.ing-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.ing-row:last-child{border-bottom:0}
+.ing-row:active{background:var(--sunk)}
+.ing-main,.ing-qty{display:grid;gap:3px;min-width:0}
+.ing-main b{overflow-wrap:anywhere}
+.ing-main small,.ing-qty small{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ing-qty{justify-items:end;text-align:right;font-variant-numeric:tabular-nums}
+.make-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.make-row:last-child{border-bottom:0}
+.mk-name{font-weight:650}
+.mk-n{font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;text-align:right}
+.mk-n.low{color:var(--warn)}
+.mk-n.out{color:var(--danger)}
+.mk-lim{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.notice{background:var(--warn-soft);border-radius:12px;padding:12px 14px;font-size:15px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ing-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;background:var(--sunk);border-radius:12px;padding:14px}
+.ing-hero .big-amt{font-size:34px}
+.hero-v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 14px;font-size:15px}
+.kv span{color:var(--muted)}
+.kv b{text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.log{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.log-row{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px}
+.log-row:last-child{border-bottom:0}
+.log-row small{display:block;color:var(--muted);font-size:12px}
+.log-row b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.count-list{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.count-row{display:grid;grid-template-columns:minmax(0,1fr) 100px 50px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.count-row:last-child{border-bottom:0}
+.count-row small{display:block;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.count-row .ru{color:var(--muted);font-size:14px;overflow:hidden;text-overflow:ellipsis}
+.two-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kpi small{color:var(--muted);font-weight:600;font-size:13px}
 
 /* ---------- Receipt preview + print dialog ---------- */
 #print-area{display:none}
@@ -332,6 +390,24 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
       </div>
     </section>
 
+    <!-- INVENTORY -->
+    <section id="v-inventory" class="view page" hidden>
+      <div class="page-inner">
+        <div class="page-head">
+          <div><h1>Inventory</h1><p class="muted" id="iSummary"></p></div>
+          <div class="tools"><button class="ghost" id="iCount" type="button">Count stock</button><button class="primary" id="iNew" type="button">Add ingredient</button></div>
+        </div>
+        <div class="notice" id="iNotice" hidden><span id="iNoticeText"></span><button class="primary sm" id="iNoticeBtn" type="button">Count stock</button></div>
+        <div class="kpis four" id="iKpis"></div>
+        <div class="card"><div class="card-h"><h3>Can make now</h3></div><p class="hint" style="padding:0 16px 6px">Based on what's left and each recipe.</p><div id="iMake"></div></div>
+        <div class="card">
+          <div class="card-h"><h3>Ingredients</h3></div>
+          <div class="chips" id="iFilter" style="padding:0 16px 10px"></div>
+          <div id="iList"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- REPORT -->
     <section id="v-report" class="view page" hidden>
       <div class="page-inner">
@@ -348,6 +424,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
         <div class="two">
           <div class="card"><div class="card-h"><h3>By payment</h3></div><div class="tbl-wrap"><table id="rMethods"></table></div></div>
           <div class="card"><div class="card-h"><h3>Items sold</h3></div><div class="tbl-wrap"><table id="rItems"></table></div></div>
+          <div class="card"><div class="card-h"><h3>Ingredients used</h3></div><div class="tbl-wrap"><table id="rUsage"></table></div></div>
         </div>
       </div>
     </section>
@@ -356,7 +433,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
     <section id="v-menu" class="view page" hidden>
       <div class="page-inner">
         <div class="page-head">
-          <div><h1>Menu</h1><p class="muted">Tap an item to change its sizes or prices.</p></div>
+          <div><h1>Menu</h1><p class="muted">Tap an item to change prices or its recipe. Costs come from the Inventory tab.</p></div>
           <button class="primary" id="mNew" type="button">Add item</button>
         </div>
         <div id="mGroups" style="display:grid;gap:14px"></div>
@@ -425,7 +502,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
             <div class="m-actions stack">
               <button class="primary" id="dBackup" type="button">Save backup</button>
               <button class="ghost" id="dRestore" type="button">Restore backup</button>
-              <button class="ghost" id="dResetMenu" type="button">Load sample menu</button>
+              <button class="ghost" id="dResetMenu" type="button">Reset to starter menu</button>
               <button class="ghost danger-text" id="dClear" type="button">Delete all sales</button>
               <input type="file" id="dFile" accept="application/json,.json" hidden>
             </div>
@@ -441,6 +518,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
 <nav class="tabbar" id="tabs" aria-label="Sections">
   <button data-view="register" type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 10.5h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3.5c-.8 1 .8 1.7 0 2.7M12 3.5c-.8 1 .8 1.7 0 2.7"/></svg>Register</button>
   <button data-view="orders" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>Orders</button>
+  <button data-view="inventory" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></svg>Inventory</button>
   <button data-view="report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-8M12 20V5M19 20v-5M3 20h18"/></svg>Report</button>
   <button data-view="menu" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Menu</button>
   <button data-view="settings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</button>
@@ -469,6 +547,11 @@ const money = n => (S.currency || '') + r2(n).toLocaleString('en-PH', {minimumFr
 const moneyShort = n => { const v = r2(n); return (S.currency || '') + (Number.isInteger(v) ? v.toLocaleString('en-PH') : v.toLocaleString('en-PH', {minimumFractionDigits: 2})); };
 const isCash = m => /cash/i.test(m || '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const r4 = n => Math.round((+n + Number.EPSILON) * 10000) / 10000;
+const fmtNum = n => (+n || 0).toLocaleString('en-PH', {maximumFractionDigits: 2});
+const fmtQty = (n, u) => fmtNum(n) + (u ? ' ' + u : '');
+const moneyUnit = n => (S.currency || '') + (+n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: n > 0 && n < 1 ? 4 : 2});
+const lc = s => String(s || '').trim().toLowerCase();
 
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
@@ -487,41 +570,62 @@ try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } 
 const DEFAULT_SETTINGS = {shopName: 'Pop-Up Coffee', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
   notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: false,
   printMode: '', cutPaper: true, btSlow: false};
-const SAMPLE_MENU = [
-  ['Espresso', 'Americano', [['12 oz', 110], ['16 oz', 130]], true],
-  ['Espresso', 'Café Latte', [['12 oz', 130], ['16 oz', 150]], true],
-  ['Espresso', 'Spanish Latte', [['12 oz', 145], ['16 oz', 165]], true],
-  ['Espresso', 'Caramel Macchiato', [['12 oz', 155], ['16 oz', 175]], true],
-  ['Espresso', 'Mocha', [['12 oz', 150], ['16 oz', 170]], true],
-  ['Espresso', 'Cold Brew', [['16 oz', 140]], true],
-  ['Non-Coffee', 'Matcha Latte', [['12 oz', 150], ['16 oz', 170]], true],
-  ['Non-Coffee', 'Iced Chocolate', [['16 oz', 130]], true],
-  ['Non-Coffee', 'Strawberry Milk', [['16 oz', 140]], true],
-  ['Pastry', 'Butter Croissant', [['', 95]], false],
-  ['Pastry', 'Banana Bread', [['', 85]], false],
-  ['Pastry', 'Ensaymada', [['', 75]], false],
-  ['Pastry', 'Choc Chip Cookie', [['', 65]], false],
-  ['Others', 'Bottled Water', [['', 30]], false],
-];
-const SAMPLE_ADDONS = [['Extra shot', 30], ['Oat milk', 35], ['Vanilla syrup', 20], ['Sea salt cream', 35], ['Iced', 0], ['Less sweet', 0]];
-const sampleMenu = () => SAMPLE_MENU.map(([cat, name, v, a]) => ({id: uid(), cat, name, variants: v.map(([label, price]) => ({label, price})), addons: a}));
-const sampleAddons = () => SAMPLE_ADDONS.map(([name, price]) => ({id: uid(), name, price}));
+/* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
+const SHEET_INGR = [ // name, unit, pack cost, pack size
+  ['Matcha', 'g', 1700, 100], ['Oatside', 'g', 135, 1030], ['Agave', 'g', 350, 1200], ['Sticker Packaging', 'pcs', 70, 33],
+  ['Cup lid straw', 'pcs', 5, 1], ['Ice', 'g', 33, 2000], ['Hojicha', 'g', 850, 100], ['Mineral Water', 'gallon', 25, 1],
+  ['Milo Champ Bites', 'sachet', 10, 1], ['All Purpose Cream', 'ml', 90, 225], ['Condensed', 'ml', 80, 377], ['Full Cream Milk', 'ml', 105, 1000],
+  ['Sea salt', 'g', 76, 225], ['Sea Salt Cream', 'g', 13.33, 30], ['Strawberry', 'g', 0, 0], ['Honey', 'g', 0, 0], ['Gelatin', 'g', 0, 0]];
+const BASE_LATTE = [['Oatside', 160], ['Agave', 12], ['Ice', 50], ['Cup lid straw', 1], ['Sticker Packaging', 1]];
+const SHEET_DRINKS = [ // name, starting price (sheet cost + 100% markup, rounded), recipe, other cost per cup (electricity)
+  ['Matcha Latte', 200, [['Matcha', 4], ...BASE_LATTE], 0.25],
+  ['Matcha Sea Salt Latte', 230, [['Matcha', 4], ...BASE_LATTE, ['Sea Salt Cream', 30]], 0.25],
+  ['Hojicha Latte', 170, [['Hojicha', 6], ...BASE_LATTE], 0.25],
+  ['Hojicha Sea Salt Latte', 195, [['Hojicha', 6], ...BASE_LATTE, ['Sea Salt Cream', 30]], 0.25]];
+const STARTER_ADDONS = [['Sea salt cream', 35, [['Sea Salt Cream', 30]]], ['Less sweet', 0, []], ['Less ice', 0, []]];
+const DRINK_CAT = 'Matcha & Hojicha';
+const seedIngredients = () => SHEET_INGR.map(([name, unit, packCost, packSize]) => ({id: uid(), name, unit, packCost, packSize, stock: 0, low: r2(packSize * .25), counted: false}));
+const ingByName = n => INGR.find(i => lc(i.name) === lc(n));
+const toRecipe = rows => rows.map(([n, qty]) => { const i = ingByName(n); return i ? {ing: i.id, qty} : null; }).filter(Boolean);
+const drinkItem = ([name, price, rec, extra]) => ({id: uid(), cat: DRINK_CAT, name, variants: [{label: '', price, recipe: toRecipe(rec), extra}], addons: true});
+const starterMenu = () => SHEET_DRINKS.map(drinkItem);
+const starterAddons = () => STARTER_ADDONS.map(([name, price, rec]) => ({id: uid(), name, price, recipe: toRecipe(rec)}));
+/* Phones that already use the app: keep their menu, attach the sheet's recipes to matching items, add the missing drinks. */
+function attachSheetRecipes() {
+  const added = [];
+  SHEET_DRINKS.forEach(d => {
+    const it = MENU.find(m => lc(m.name) === lc(d[0]));
+    if (!it) { added.push(drinkItem(d)); return; }
+    it.variants.forEach(v => { if (!(v.recipe && v.recipe.length)) { v.recipe = toRecipe(d[2]); v.extra = d[3]; } });
+  });
+  MENU = added.concat(MENU);
+  const ssc = ADDONS.find(a => lc(a.name) === 'sea salt cream');
+  if (ssc && !(ssc.recipe && ssc.recipe.length)) ssc.recipe = toRecipe([['Sea Salt Cream', 30]]);
+}
 const emptyCart = () => ({lines: [], customer: '', discount: {kind: 'none', value: 0, label: ''}});
 
-let S, MENU, ADDONS, ORDERS, SEQ, cart;
+let S, MENU, ADDONS, ORDERS, SEQ, cart, INGR, INVLOG;
 function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
-  MENU = store.get('menu', null) || sampleMenu();
-  ADDONS = store.get('addons', null) || sampleAddons();
   ORDERS = store.get('orders', []);
   SEQ = store.get('seq', {date: '', n: 0});
   cart = Object.assign(emptyCart(), store.get('cart', {}));
+  INGR = store.get('ingredients', null);
+  INVLOG = store.get('invlog', []);
+  const savedMenu = store.get('menu', null);
+  if (!INGR) {
+    INGR = seedIngredients();
+    if (savedMenu) { MENU = savedMenu; ADDONS = store.get('addons', null) || starterAddons(); attachSheetRecipes(); }
+    else { MENU = starterMenu(); ADDONS = starterAddons(); }
+    saveInv(); saveMenu();
+  } else { MENU = savedMenu || []; ADDONS = store.get('addons', null) || []; }
 }
 const saveSettings = () => store.set('settings', S);
 const saveMenu = () => { store.set('menu', MENU); store.set('addons', ADDONS); };
 const saveOrders = () => { store.set('orders', ORDERS); store.set('seq', SEQ); };
 const saveCart = () => store.set('cart', cart);
+const saveInv = () => { if (INVLOG.length > 800) INVLOG = INVLOG.slice(-800); store.set('ingredients', INGR); store.set('invlog', INVLOG); };
 
 /* ================= math ================= */
 const lineUnit = l => r2(l.price + l.addons.reduce((a, x) => a + x.price, 0));
@@ -535,6 +639,42 @@ function totals(c) {
 }
 const peekNo = () => (SEQ.date === today() ? SEQ.n : 0) + 1;
 function takeNo() { const t = today(); if (SEQ.date !== t) SEQ = {date: t, n: 0}; SEQ.n += 1; return SEQ.n; }
+
+/* ---------- costing ---------- */
+const ingById = id => INGR.find(i => i.id === id);
+const unitCost = i => i && i.packSize > 0 ? i.packCost / i.packSize : 0;
+const recipeCost = (rec, extra) => (rec || []).reduce((a, r) => a + r.qty * unitCost(ingById(r.ing)), 0) + (+extra || 0);
+const hasRecipe = v => !!(v && ((v.recipe && v.recipe.length) || +v.extra));
+const marginTxt = (price, cost) => price > 0 ? Math.round((price - cost) / price * 100) + '% margin' : '';
+/* How many servings the current stock covers, and which ingredient runs out first. */
+function canMake(rec) {
+  let n = Infinity, limit = null, uncounted = false;
+  (rec || []).forEach(r => {
+    const i = ingById(r.ing); if (!i || !(r.qty > 0)) return;
+    if (!i.counted) uncounted = true;
+    const k = Math.max(0, Math.floor((i.stock + 1e-9) / r.qty));
+    if (k < n) { n = k; limit = i; }
+  });
+  return n === Infinity ? null : {n, limit, uncounted};
+}
+/* Cost and ingredient use for one unit of a cart line (size recipe + add-on recipes + other costs). */
+function lineCosting(l) {
+  const item = MENU.find(m => m.id === l.itemId);
+  const v = item && (item.variants.find(x => x.label === l.variant) || item.variants[0]);
+  const use = {}; let cost = 0, known = false;
+  const add = (rec, extra) => {
+    if ((rec && rec.length) || +extra) known = true;
+    (rec || []).forEach(r => { if (ingById(r.ing)) use[r.ing] = (use[r.ing] || 0) + r.qty; });
+    cost += recipeCost(rec, extra);
+  };
+  if (v) add(v.recipe, v.extra);
+  l.addons.forEach(a => { const ad = ADDONS.find(x => x.id === a.id); if (ad) add(ad.recipe, 0); });
+  return {cost, use, known};
+}
+function restoreUsage(o) {
+  Object.entries(o.usage || {}).forEach(([id, q]) => { const i = ingById(id); if (i) i.stock = r4(i.stock + q); });
+  saveInv();
+}
 
 /* ================= ui primitives ================= */
 let toastT;
@@ -627,11 +767,16 @@ function reportSpec(f, t, r) {
   const R = [{k: 'c', t: S.shopName, sz: 'l', b: 1}, {k: 'c', t: 'SALES REPORT', b: 1}, {k: 'c', t: rangeLabel(f, t)},
     {k: 'c', t: 'Printed ' + fmtDate(Date.now()) + ' ' + fmtTime(Date.now()), sz: 's'}, {k: 'hr'},
     {k: 'lr', l: 'Orders', r: String(r.count)}, {k: 'lr', l: 'Gross sales', r: money(r.gross)}, {k: 'lr', l: 'Discounts', r: '-' + money(r.disc)},
-    {k: 'lr', l: 'NET SALES', r: money(r.net), sz: 'l', b: 1}, {k: 'lr', l: 'Average order', r: money(r.avg)}, {k: 'lr', l: 'Voided orders', r: String(r.voided)},
+    {k: 'lr', l: 'NET SALES', r: money(r.net), sz: 'l', b: 1}, {k: 'lr', l: 'Cost of goods', r: '-' + money(r.cogs)},
+    {k: 'lr', l: 'GROSS PROFIT', r: money(r.gp), b: 1}, {k: 'lr', l: 'Average order', r: money(r.avg)}, {k: 'lr', l: 'Voided orders', r: String(r.voided)},
     {k: 'hr'}, {k: 't', t: 'BY PAYMENT', b: 1}];
   if (r.methodList.length) r.methodList.forEach(([k, v]) => R.push({k: 'lr', l: k + ' (' + v.n + ')', r: money(v.amt)})); else R.push({k: 't', t: 'None'});
   R.push({k: 'hr'}, {k: 't', t: 'ITEMS SOLD', b: 1});
   if (r.itemList.length) r.itemList.forEach(([k, v]) => R.push({k: 'lr', l: v.qty + ' x ' + k, r: money(v.amt)})); else R.push({k: 't', t: 'None'});
+  if (r.usageList.length) {
+    R.push({k: 'hr'}, {k: 't', t: 'INGREDIENTS USED', b: 1});
+    r.usageList.forEach(u => R.push({k: 'lr', l: fmtQty(u.q, u.unit) + ' ' + u.name, r: money(u.cost)}));
+  }
   R.push({k: 'hr'});
   return R;
 }
@@ -824,7 +969,7 @@ function go(v) {
   $$('main > .view').forEach(s => { s.hidden = s.id !== 'v-' + v; });
   closeSheet();
   window.scrollTo(0, 0);
-  ({register: renderRegister, orders: renderOrders, report: renderReport, menu: renderMenu, settings: renderSettings})[v]();
+  ({register: renderRegister, orders: renderOrders, inventory: renderInventory, report: renderReport, menu: renderMenu, settings: renderSettings})[v]();
   renderOrderBar();
 }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) go(b.dataset.view); });
@@ -847,9 +992,17 @@ function renderGrid() {
   $('#grid').innerHTML = items.length ? items.map(m => {
     const min = Math.min(...m.variants.map(v => v.price));
     const sizes = m.variants.length > 1 ? m.variants.map(v => esc(v.label)).join(' / ') : esc(m.variants[0].label || '');
-    return `<button class="tile" data-id="${m.id}" type="button">${inCart[m.id] ? `<span class="badge">${inCart[m.id]}</span>` : ''}
-      <span class="t-name">${esc(m.name)}</span><span class="t-price"><b>${m.variants.length > 1 ? 'from ' : ''}${moneyShort(min)}</b><span>${sizes}</span></span></button>`;
+    const left = stockLeft(m);
+    const tag = left == null ? '' : left === 0 ? '<span class="t-stock out">Out of stock</span>' : left <= 5 ? `<span class="t-stock">${left} left</span>` : '';
+    return `<button class="tile ${left === 0 ? 'is-out' : ''}" data-id="${m.id}" type="button">${inCart[m.id] ? `<span class="badge">${inCart[m.id]}</span>` : ''}
+      <span class="t-top"><span class="t-name">${esc(m.name)}</span>${tag}</span><span class="t-price"><b>${m.variants.length > 1 ? 'from ' : ''}${moneyShort(min)}</b><span>${sizes}</span></span></button>`;
   }).join('') : `<div class="empty">No items match “${esc(query)}”.</div>`;
+}
+/* Most servings any size of this item can still make (null when stock isn't counted or there's no recipe). */
+function stockLeft(m) {
+  let best = null;
+  m.variants.forEach(v => { const c = canMake(v.recipe); if (c && !c.uncounted) best = best == null ? c.n : Math.max(best, c.n); });
+  return best;
 }
 $('#cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; activeCat = b.dataset.cat; renderCats(); renderGrid(); });
 $('#search').addEventListener('input', e => { query = e.target.value; renderGrid(); });
@@ -1056,15 +1209,28 @@ function openPay() {
 /* Runs inside the "Complete sale" tap, so the share sheet / Bluetooth chooser may open. */
 function completeSale(method, tendered, ref) {
   const t = totals(cart);
+  const lines = JSON.parse(JSON.stringify(cart.lines));
+  const usage = {}; let cost = 0, costKnown = true;
+  lines.forEach(l => {
+    const c = lineCosting(l);
+    l.cost = r4(c.cost); if (!c.known) costKnown = false;
+    cost += c.cost * l.qty;
+    Object.entries(c.use).forEach(([id, q]) => { usage[id] = r4((usage[id] || 0) + q * l.qty); });
+  });
+  const before = {}; INGR.forEach(i => { before[i.id] = i.stock; });
+  Object.entries(usage).forEach(([id, q]) => { const i = ingById(id); if (i) i.stock = r4(i.stock - q); });
   const o = {id: uid(), no: takeNo(), ts: Date.now(), customer: cart.customer.trim(),
-    lines: JSON.parse(JSON.stringify(cart.lines)), sub: t.sub, disc: t.disc, discLabel: t.disc ? cart.discount.label : '',
-    total: t.total, method, tendered, change: isCash(method) ? r2(tendered - t.total) : 0, ref, voided: false};
-  ORDERS.push(o); saveOrders();
+    lines, sub: t.sub, disc: t.disc, discLabel: t.disc ? cart.discount.label : '',
+    total: t.total, method, tendered, change: isCash(method) ? r2(tendered - t.total) : 0, ref, voided: false,
+    cost: r2(cost), costKnown, usage};
+  ORDERS.push(o); saveOrders(); saveInv();
+  const lowNow = INGR.filter(i => i.counted && usage[i.id] && ((i.low > 0 && i.stock <= i.low && before[i.id] > i.low) || (i.stock <= 0 && before[i.id] > 0)));
   cart = emptyCart(); saveCart();
   closeModal(); closeSheet();
   renderTicket(); renderGrid(); renderHeader();
   showDone(o);
   if (S.autoPrint || S.baristaTicket) printOrder(o, {receipt: S.autoPrint, barista: S.baristaTicket});
+  if (lowNow.length) setTimeout(() => toast((lowNow.some(i => i.stock <= 0) ? 'Check stock: ' : 'Running low: ') + lowNow.map(i => `${i.name} (${fmtQty(Math.max(0, i.stock), i.unit)} left)`).join(', '), 5000), 400);
 }
 function showDone(o) {
   const cash = isCash(o.method);
@@ -1109,8 +1275,8 @@ $('#oList').addEventListener('click', e => {
   $('#vPrint', m).onclick = () => printOrder(o, {receipt: true});
   $('#vBar', m).onclick = () => printOrder(o, {barista: true});
   if (!o.voided) $('#vVoid', m).onclick = async () => {
-    if (await confirmBox({title: `Void order #${pad3(o.no)}?`, body: `${money(o.total)} will be removed from sales totals. The order stays in the list, marked voided.`, ok: 'Void order', danger: true})) {
-      o.voided = true; o.voidedAt = Date.now(); saveOrders(); renderOrders(); renderHeader(); toast(`Order #${pad3(o.no)} voided`);
+    if (await confirmBox({title: `Void order #${pad3(o.no)}?`, body: `${money(o.total)} will be removed from sales totals and its ingredients go back into inventory. The order stays in the list, marked voided.`, ok: 'Void order', danger: true})) {
+      o.voided = true; o.voidedAt = Date.now(); saveOrders(); restoreUsage(o); renderOrders(); renderHeader(); toast(`Order #${pad3(o.no)} voided`);
     }
   };
 });
@@ -1119,16 +1285,22 @@ $('#oList').addEventListener('click', e => {
 function computeReport(from, to) {
   const os = ORDERS.filter(o => { const k = dkey(o.ts); return k >= from && k <= to; });
   const valid = os.filter(o => !o.voided);
-  const r = {count: valid.length, voided: os.length - valid.length, gross: 0, disc: 0, net: 0, methods: {}, items: {}};
+  const r = {count: valid.length, voided: os.length - valid.length, gross: 0, disc: 0, net: 0, methods: {}, items: {}, cogs: 0, costMissing: 0, usage: {}};
   valid.forEach(o => {
     r.gross += o.sub; r.disc += o.disc; r.net += o.total;
+    r.cogs += o.cost || 0;
+    if (o.cost == null || o.costKnown === false) r.costMissing++;
+    Object.entries(o.usage || {}).forEach(([id, q]) => { r.usage[id] = (r.usage[id] || 0) + q; });
     const mm = r.methods[o.method] = r.methods[o.method] || {n: 0, amt: 0}; mm.n++; mm.amt += o.total;
     o.lines.forEach(l => {
       const key = l.name + (l.variant ? ' ' + l.variant : '');
-      const it = r.items[key] = r.items[key] || {qty: 0, amt: 0}; it.qty += l.qty; it.amt += lineTotal(l);
+      const it = r.items[key] = r.items[key] || {qty: 0, amt: 0, cost: 0}; it.qty += l.qty; it.amt += lineTotal(l); it.cost += (l.cost || 0) * l.qty;
     });
   });
   r.avg = r.count ? r.net / r.count : 0;
+  r.gp = r.net - r.cogs; r.gpPct = r.net ? r.gp / r.net * 100 : 0;
+  r.usageList = Object.entries(r.usage).map(([id, q]) => { const i = ingById(id); return {name: i ? i.name : 'Deleted ingredient', q, unit: i ? i.unit : '', cost: q * unitCost(i)}; })
+    .sort((a, b) => b.cost - a.cost || a.name.localeCompare(b.name));
   r.itemList = Object.entries(r.items).sort((a, b) => b[1].qty - a[1].qty || b[1].amt - a[1].amt);
   r.methodList = Object.entries(r.methods).sort((a, b) => b[1].amt - a[1].amt);
   return r;
@@ -1139,18 +1311,25 @@ function renderReport() {
   if (!f.value) f.value = today(); if (!t.value) t.value = today();
   if (t.value < f.value) t.value = f.value;
   const r = computeReport(f.value, t.value);
-  $('#rRange').textContent = rangeLabel(f.value, t.value) + (r.voided ? ` · ${r.voided} voided excluded` : '');
-  $('#rKpis').innerHTML = [['Net sales', money(r.net)], ['Orders', r.count], ['Average order', money(r.avg)], ['Discounts', money(r.disc)]]
-    .map(([l, v]) => `<div class="card kpi"><span class="eyebrow">${l}</span><span class="v">${v}</span></div>`).join('');
+  $('#rRange').textContent = rangeLabel(f.value, t.value) + (r.voided ? ` · ${r.voided} voided excluded` : '') +
+    (r.costMissing ? ` · ${r.costMissing} order${r.costMissing === 1 ? ' has' : 's have'} items without a recipe, so cost is understated` : '');
+  $('#rKpis').innerHTML = [['Net sales', money(r.net)], ['Cost of goods', money(r.cogs)], ['Gross profit', money(r.gp), r.net ? Math.round(r.gpPct) + '% of sales' : ''],
+    ['Orders', r.count], ['Average order', money(r.avg)], ['Discounts', money(r.disc)]]
+    .map(([l, v, sm]) => `<div class="card kpi"><span class="eyebrow">${l}</span><span class="v ${l === 'Gross profit' && r.gp < 0 ? 'neg' : ''}">${v}</span>${sm ? `<small>${sm}</small>` : ''}</div>`).join('');
   $('#rMethods').innerHTML = r.methodList.length
     ? `<thead><tr><th>Method</th><th class="r">Orders</th><th class="r">Amount</th></tr></thead><tbody>${r.methodList.map(([k, v]) =>
       `<tr><td>${esc(k)}</td><td class="r">${v.n}</td><td class="r">${money(v.amt)}</td></tr>`).join('')}
       <tr><td><b>Total</b></td><td class="r"><b>${r.count}</b></td><td class="r"><b>${money(r.net)}</b></td></tr></tbody>`
     : '<tbody><tr><td class="muted">No sales in this range.</td></tr></tbody>';
   $('#rItems').innerHTML = r.itemList.length
-    ? `<thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Sales</th></tr></thead><tbody>${r.itemList.map(([k, v]) =>
-      `<tr><td>${esc(k)}</td><td class="r">${v.qty}</td><td class="r">${money(v.amt)}</td></tr>`).join('')}</tbody>`
+    ? `<thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Sales</th><th class="r">Cost</th></tr></thead><tbody>${r.itemList.map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td class="r">${v.qty}</td><td class="r">${money(v.amt)}</td><td class="r">${v.cost ? money(v.cost) : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody>`
     : '<tbody><tr><td class="muted">No items sold in this range.</td></tr></tbody>';
+  $('#rUsage').innerHTML = r.usageList.length
+    ? `<thead><tr><th>Ingredient</th><th class="r">Used</th><th class="r">Cost</th></tr></thead><tbody>${r.usageList.map(u =>
+      `<tr><td>${esc(u.name)}</td><td class="r">${fmtQty(u.q, u.unit)}</td><td class="r">${money(u.cost)}</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td></td><td class="r"><b>${money(r.usageList.reduce((a, u) => a + u.cost, 0))}</b></td></tr></tbody>`
+    : '<tbody><tr><td class="muted">No ingredients used in this range.</td></tr></tbody>';
 }
 $('#rFrom').addEventListener('change', renderReport);
 $('#rTo').addEventListener('change', renderReport);
@@ -1158,69 +1337,150 @@ $('#rPrint').addEventListener('click', () => { const f = $('#rFrom').value, t = 
 $('#rCsv').addEventListener('click', () => {
   const f = $('#rFrom').value, t = $('#rTo').value;
   const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const rows = [['date', 'time', 'order_no', 'customer', 'item', 'size', 'add_ons', 'note', 'qty', 'unit_price', 'line_total', 'order_discount', 'order_total', 'payment', 'reference', 'voided']];
+  const rows = [['date', 'time', 'order_no', 'customer', 'item', 'size', 'add_ons', 'note', 'qty', 'unit_price', 'line_total', 'line_cost', 'order_discount', 'order_total', 'payment', 'reference', 'voided']];
   ORDERS.filter(o => { const k = dkey(o.ts); return k >= f && k <= t; }).sort((a, b) => a.ts - b.ts).forEach(o => o.lines.forEach((l, i) => rows.push([
     dkey(o.ts), new Date(o.ts).toTimeString().slice(0, 5), pad3(o.no), o.customer, l.name, l.variant, l.addons.map(a => a.name).join('; '), l.note,
-    l.qty, lineUnit(l).toFixed(2), lineTotal(l).toFixed(2), i ? '' : o.disc.toFixed(2), i ? '' : o.total.toFixed(2), o.method, o.ref || '', o.voided ? 'yes' : ''])));
+    l.qty, lineUnit(l).toFixed(2), lineTotal(l).toFixed(2), ((l.cost || 0) * l.qty).toFixed(2), i ? '' : o.disc.toFixed(2), i ? '' : o.total.toFixed(2), o.method, o.ref || '', o.voided ? 'yes' : ''])));
   if (rows.length === 1) { toast('No sales in this range to export.'); return; }
   saveFile(`sales-${f}${f === t ? '' : '_to_' + t}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
 });
 
 /* ================= menu editor ================= */
+function recipeLabel(rec, extra, price) {
+  if (!((rec && rec.length) || +extra)) return '+ Add recipe for costing and inventory';
+  const c = recipeCost(rec, extra), n = (rec || []).length;
+  return `Recipe · ${n} ingredient${n === 1 ? '' : 's'} · cost ${money(c)}${price > 0 ? ' · ' + marginTxt(price, c) : ''}`;
+}
 function renderMenu() {
   const groups = {};
   MENU.forEach(m => { (groups[m.cat || 'Other'] = groups[m.cat || 'Other'] || []).push(m); });
   $('#mGroups').innerHTML = Object.keys(groups).length ? Object.entries(groups).map(([c, items]) => `
     <div class="card"><div class="card-h"><h3>${esc(c)}</h3><span class="muted num">${items.length}</span></div>
       ${items.map(m => `<button class="menu-row" data-id="${m.id}" type="button"><span><b>${esc(m.name)}</b>${m.addons ? ' <span class="muted">· add-ons</span>' : ''}</span>
-        <span class="p">${m.variants.map(v => (v.label ? esc(v.label) + ' ' : '') + moneyShort(v.price)).join('<br>')}</span></button>`).join('')}</div>`).join('')
+        <span class="p">${m.variants.map(v => {
+          const has = hasRecipe(v), cost = has ? recipeCost(v.recipe, v.extra) : 0;
+          return `<span class="mv">${v.label ? esc(v.label) + ' ' : ''}${moneyShort(v.price)}</span><span class="mc ${has ? '' : 'none'}">${has ? 'cost ' + money(cost) + ' · ' + marginTxt(v.price, cost) : 'No recipe'}</span>`;
+        }).join('')}</span></button>`).join('')}</div>`).join('')
     : '<div class="card empty">No items yet. Tap “Add item” to build your menu.</div>';
   $('#aList').innerHTML = ADDONS.length ? ADDONS.map((a, i) => `<div class="addon-row" data-i="${i}">
       <input class="an" value="${esc(a.name)}" aria-label="Add-on name"><input class="ap" type="number" min="0" step="0.01" inputmode="decimal" value="${a.price}" aria-label="Add-on price">
-      <button class="icon-btn" data-rm="${i}" type="button" aria-label="Remove ${esc(a.name)}">×</button></div>`).join('')
+      <button class="icon-btn" data-rm="${i}" type="button" aria-label="Remove ${esc(a.name)}">×</button>
+      <button class="rec-btn ${a.recipe && a.recipe.length ? 'set' : ''}" data-rec="${i}" type="button">${a.recipe && a.recipe.length ? recipeLabel(a.recipe, 0, a.price) : '+ Add recipe (uses ingredients)'}</button></div>`).join('')
     : '<p class="hint" style="padding:0 16px 14px">No add-ons yet.</p>';
 }
 $('#mGroups').addEventListener('click', e => { const b = e.target.closest('.menu-row'); if (b) openItemEditor(MENU.find(m => m.id === b.dataset.id)); });
 $('#mNew').addEventListener('click', () => openItemEditor(null));
-$('#aNew').addEventListener('click', () => { ADDONS.push({id: uid(), name: 'New add-on', price: 0}); saveMenu(); renderMenu(); const ins = $$('#aList .an'); const last = ins[ins.length - 1]; if (last) { last.focus(); last.select(); } });
+$('#aNew').addEventListener('click', () => { ADDONS.push({id: uid(), name: 'New add-on', price: 0, recipe: []}); saveMenu(); renderMenu(); const ins = $$('#aList .an'); const last = ins[ins.length - 1]; if (last) { last.focus(); last.select(); } });
 $('#aList').addEventListener('change', e => {
   const row = e.target.closest('.addon-row'); if (!row) return; const a = ADDONS[+row.dataset.i];
-  if (e.target.classList.contains('an')) a.name = e.target.value.trim() || 'Add-on'; else a.price = Math.max(0, parseFloat(e.target.value) || 0);
+  if (e.target.classList.contains('an')) a.name = e.target.value.trim() || 'Add-on'; else if (e.target.classList.contains('ap')) a.price = Math.max(0, parseFloat(e.target.value) || 0);
   saveMenu();
 });
-$('#aList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; ADDONS.splice(+b.dataset.rm, 1); saveMenu(); renderMenu(); });
+$('#aList').addEventListener('click', e => {
+  const rb = e.target.closest('[data-rec]');
+  if (rb) {
+    const a = ADDONS[+rb.dataset.rec];
+    openRecipeEditor({title: 'Add-on recipe', sub: a.name + ' · used each time it’s added', recipe: a.recipe, extra: 0, price: a.price, showExtra: false},
+      rec => { a.recipe = rec; saveMenu(); renderMenu(); }, null);
+    return;
+  }
+  const b = e.target.closest('[data-rm]'); if (!b) return; ADDONS.splice(+b.dataset.rm, 1); saveMenu(); renderMenu();
+});
 
-function openItemEditor(item) {
+/* Recipe editor. onSave(recipe, extra) runs on Save; after() runs whenever the editor closes. */
+function openRecipeEditor(o, onSave, after) {
+  const rows = (o.recipe || []).filter(r => ingById(r.ing)).map(r => ({ing: r.ing, qty: r.qty}));
+  let extra = +o.extra || 0, saved = false;
+  const sorted = () => INGR.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const m = openModal(`<div><h2>${esc(o.title)}</h2><p class="muted">${esc(o.sub)}</p></div>
+    <div class="vars" id="rRows"></div>
+    <div><button type="button" class="ghost sm" id="rAdd" ${INGR.length ? '' : 'disabled'}>Add ingredient</button></div>
+    ${INGR.length ? '<p class="hint">Amounts are per serving, in each ingredient’s unit. Missing an ingredient? Add it in the Inventory tab.</p>' : '<p class="hint">Add ingredients in the Inventory tab first.</p>'}
+    ${o.showExtra ? `<div class="field"><label class="label" for="rExtra">Other cost per serving (electricity, gas, etc.)</label><input id="rExtra" type="number" min="0" step="0.01" inputmode="decimal" value="${extra || ''}" placeholder="0.00"></div>` : ''}
+    <div class="cost-sum" id="rSum"></div>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="rSave" type="button">Save recipe</button></div>`, true);
+  modalOnClose = () => { if (after) after(saved); };
+  const rc = r => { const i = ingById(r.ing); return i ? `${fmtQty(r.qty || 0, i.unit)} × ${moneyUnit(unitCost(i))} = ${money((r.qty || 0) * unitCost(i))}${unitCost(i) ? '' : ' · no cost set'}` : 'Choose an ingredient'; };
+  const sum = () => {
+    const ingC = rows.reduce((a, r) => a + (r.qty || 0) * unitCost(ingById(r.ing)), 0), total = ingC + extra, price = +o.price || 0, profit = price - total;
+    $('#rSum', m).innerHTML = `<div class="sum"><span>Ingredients</span><span>${money(ingC)}</span></div>
+      ${o.showExtra ? `<div class="sum"><span>Other costs</span><span>${money(extra)}</span></div>` : ''}
+      <div class="sum b"><span>Cost per serving</span><span>${money(total)}</span></div>
+      ${price > 0 ? `<div class="sum"><span>Selling price</span><span>${money(price)}</span></div>
+      <div class="sum b ${profit < 0 ? 'neg' : 'pos'}"><span>Profit</span><span>${money(profit)} · ${Math.round(profit / price * 100)}%</span></div>` : ''}`;
+  };
+  const draw = () => {
+    $('#rRows', m).innerHTML = rows.length ? rows.map((r, i) => { const ing = ingById(r.ing); return `<div class="rec-row" data-i="${i}">
+      <select class="ri" aria-label="Ingredient"><option value="">Choose…</option>${sorted().map(x => `<option value="${x.id}" ${x.id === r.ing ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <input class="rq" type="number" min="0" step="any" inputmode="decimal" value="${r.qty || ''}" placeholder="Qty" aria-label="Amount per serving">
+      <span class="ru">${esc(ing ? ing.unit : '')}</span>
+      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Remove ingredient">×</button>
+      <span class="rc">${rc(r)}</span></div>`; }).join('') : '<p class="hint">No ingredients in this recipe yet.</p>';
+    sum();
+  };
+  const refreshRow = el => { const r = rows[+el.dataset.i], i = ingById(r.ing); el.querySelector('.ru').textContent = i ? i.unit : ''; el.querySelector('.rc').textContent = rc(r); sum(); };
+  $('#rRows', m).addEventListener('input', e => {
+    const el = e.target.closest('.rec-row'); if (!el) return; const r = rows[+el.dataset.i];
+    if (e.target.classList.contains('rq')) r.qty = Math.max(0, parseFloat(e.target.value) || 0); else r.ing = e.target.value;
+    refreshRow(el);
+  });
+  $('#rRows', m).addEventListener('change', e => { if (e.target.classList.contains('ri')) { const el = e.target.closest('.rec-row'); rows[+el.dataset.i].ing = e.target.value; refreshRow(el); } });
+  $('#rRows', m).addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { rows.splice(+b.dataset.rm, 1); draw(); } });
+  $('#rAdd', m).onclick = () => { rows.push({ing: '', qty: 0}); draw(); const sel = $$('.ri', m); if (sel.length) sel[sel.length - 1].focus(); };
+  const ex = $('#rExtra', m); if (ex) ex.addEventListener('input', () => { extra = Math.max(0, parseFloat(ex.value) || 0); sum(); });
+  $('#rSave', m).onclick = () => {
+    const rec = []; rows.forEach(r => { if (!r.ing || !(r.qty > 0)) return; const same = rec.find(x => x.ing === r.ing); if (same) same.qty = r4(same.qty + r.qty); else rec.push({ing: r.ing, qty: r4(r.qty)}); });
+    saved = true; onSave(rec, r2(extra)); closeModal();
+  };
+  draw();
+}
+
+function openItemEditor(item, draftIn) {
   const isNew = !item;
-  const draft = item ? JSON.parse(JSON.stringify(item)) : {id: uid(), name: '', cat: activeCat !== 'All' ? activeCat : '', variants: [{label: '', price: 0}], addons: false};
+  const draft = draftIn || (item ? JSON.parse(JSON.stringify(item)) : {id: uid(), name: '', cat: activeCat !== 'All' ? activeCat : '', variants: [{label: '', price: 0, recipe: [], extra: 0}], addons: false});
   const cats = [...new Set(MENU.map(m => m.cat).filter(Boolean))];
   const m = openModal(`<h2>${isNew ? 'Add item' : 'Edit item'}</h2>
     <div class="field"><label class="label" for="eName">Name</label><input id="eName" value="${esc(draft.name)}" autocomplete="off"></div>
     <div class="field"><label class="label" for="eCat">Category</label><input id="eCat" value="${esc(draft.cat)}" autocomplete="off">
       ${cats.length ? `<div class="chips" id="eCats">${cats.map(c => `<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}</div>
-    <div class="field"><div class="label">Sizes and prices</div><div class="vars" id="eVars"></div>
+    <div class="field"><div class="label">Sizes, prices and recipes</div><div class="vars" id="eVars"></div>
       <div><button type="button" class="ghost sm" id="eAddVar">Add size</button></div><p class="hint">Leave the size blank for items with a single price.</p></div>
     <label class="check"><input type="checkbox" id="eAddons" ${draft.addons ? 'checked' : ''}> Offer add-ons for this item</label>
     <p class="err" id="eErr" hidden></p>
     <div class="m-actions stack">${isNew ? '' : '<button class="ghost danger-text" id="eDel" type="button">Delete</button>'}
       <button class="ghost" data-close type="button">Cancel</button><button class="primary" id="eSave" type="button">Save</button></div>`);
+  const syncDraft = () => { draft.name = $('#eName', m).value; draft.cat = $('#eCat', m).value; draft.addons = $('#eAddons', m).checked; };
   const rv = () => {
-    $('#eVars', m).innerHTML = draft.variants.map((v, i) => `<div class="var-row" data-i="${i}">
-      <input class="vl" placeholder="Size, e.g. 12 oz" value="${esc(v.label)}" aria-label="Size name">
-      <input class="vp" type="number" min="0" step="0.01" inputmode="decimal" value="${v.price}" aria-label="Price">
-      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Remove size" ${draft.variants.length < 2 ? 'disabled' : ''}>×</button></div>`).join('');
+    $('#eVars', m).innerHTML = draft.variants.map((v, i) => `<div class="var-block">
+      <div class="var-row" data-i="${i}">
+        <input class="vl" placeholder="Size, e.g. 16 oz" value="${esc(v.label)}" aria-label="Size name">
+        <input class="vp" type="number" min="0" step="0.01" inputmode="decimal" value="${v.price}" aria-label="Price">
+        <button type="button" class="icon-btn" data-rm="${i}" aria-label="Remove size" ${draft.variants.length < 2 ? 'disabled' : ''}>×</button></div>
+      <button type="button" class="rec-btn ${hasRecipe(v) ? 'set' : ''}" data-recipe="${i}">${recipeLabel(v.recipe, v.extra, v.price)}</button></div>`).join('');
   };
   rv();
   const eCats = $('#eCats', m); if (eCats) eCats.onclick = e => { const b = e.target.closest('[data-c]'); if (b) $('#eCat', m).value = b.dataset.c; };
   $('#eVars', m).addEventListener('input', e => {
     const row = e.target.closest('.var-row'); if (!row) return; const v = draft.variants[+row.dataset.i];
-    if (e.target.classList.contains('vl')) v.label = e.target.value; else v.price = parseFloat(e.target.value) || 0;
+    if (e.target.classList.contains('vl')) v.label = e.target.value;
+    else { v.price = parseFloat(e.target.value) || 0; const rb = row.parentElement.querySelector('.rec-btn'); if (rb) rb.textContent = recipeLabel(v.recipe, v.extra, v.price); }
   });
-  $('#eVars', m).addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b && !b.disabled) { draft.variants.splice(+b.dataset.rm, 1); rv(); } });
-  $('#eAddVar', m).onclick = () => { draft.variants.push({label: '', price: 0}); rv(); const ls = $$('.vl', m); ls[ls.length - 1].focus(); };
+  $('#eVars', m).addEventListener('click', e => {
+    const rb = e.target.closest('[data-recipe]');
+    if (rb) {
+      syncDraft();
+      const v = draft.variants[+rb.dataset.recipe];
+      openRecipeEditor({title: 'Recipe', sub: (draft.name.trim() || 'New item') + (v.label ? ' · ' + v.label : ''), recipe: v.recipe, extra: v.extra, price: v.price, showExtra: true},
+        (rec, extra) => { v.recipe = rec; v.extra = extra; }, () => openItemEditor(item, draft));
+      return;
+    }
+    const b = e.target.closest('[data-rm]'); if (b && !b.disabled) { draft.variants.splice(+b.dataset.rm, 1); rv(); }
+  });
+  $('#eAddVar', m).onclick = () => { draft.variants.push({label: '', price: 0, recipe: [], extra: 0}); rv(); const ls = $$('.vl', m); ls[ls.length - 1].focus(); };
   $('#eSave', m).onclick = () => {
-    draft.name = $('#eName', m).value.trim(); draft.cat = $('#eCat', m).value.trim() || 'Other'; draft.addons = $('#eAddons', m).checked;
-    draft.variants = draft.variants.map(v => ({label: v.label.trim(), price: Math.max(0, r2(v.price))}));
+    syncDraft();
+    draft.name = draft.name.trim(); draft.cat = draft.cat.trim() || 'Other';
+    draft.variants = draft.variants.map(v => Object.assign({}, v, {label: v.label.trim(), price: Math.max(0, r2(v.price))}));
     const err = $('#eErr', m);
     if (!draft.name) { err.textContent = 'Enter a name for this item.'; err.hidden = false; return; }
     if (draft.variants.length > 1 && draft.variants.some(v => !v.label)) { err.textContent = 'Give each size a name, like 12 oz or 16 oz.'; err.hidden = false; return; }
@@ -1232,6 +1492,211 @@ function openItemEditor(item) {
     if (await confirmBox({title: `Delete ${draft.name || 'this item'}?`, body: 'Past orders keep their records. The item just disappears from the register.', ok: 'Delete item', danger: true})) {
       MENU = MENU.filter(x => x.id !== draft.id); saveMenu(); renderMenu(); toast('Item deleted');
     }
+  };
+}
+
+/* ================= inventory ================= */
+let invFilter = 'all';
+const LOGK = {restock: 'Bought', count: 'Counted', start: 'Starting count', waste: 'Waste'};
+function logInv(i, kind, delta, note) { INVLOG.push({ts: Date.now(), ing: i.id, kind, delta: r4(delta), note: note || ''}); }
+function ingState(i) {
+  if (!i.counted) return {k: 'nc', t: 'Not counted'};
+  if (i.stock <= 0) return {k: 'out', t: 'Out'};
+  if (i.low > 0 && i.stock <= i.low) return {k: 'low', t: 'Low'};
+  return {k: 'ok', t: ''};
+}
+const onHand = i => i.counted ? fmtQty(i.stock, i.unit) : '—';
+const stockValue = i => Math.max(0, i.stock) * unitCost(i);
+function usedToday(id) { const t = today(); return ORDERS.filter(o => !o.voided && dkey(o.ts) === t).reduce((a, o) => a + ((o.usage || {})[id] || 0), 0); }
+
+function renderInventory() {
+  const states = new Map(INGR.map(i => [i.id, ingState(i)]));
+  const lowN = INGR.filter(i => ['low', 'out'].includes(states.get(i.id).k)).length;
+  const ncN = INGR.filter(i => states.get(i.id).k === 'nc').length;
+  const t = today();
+  const usedCost = ORDERS.filter(o => !o.voided && dkey(o.ts) === t).reduce((a, o) => a + (o.cost || 0), 0);
+  $('#iSummary').textContent = `${INGR.length} ingredient${INGR.length === 1 ? '' : 's'} · tap one to restock, count or edit`;
+  $('#iNotice').hidden = !ncN;
+  $('#iNoticeText').textContent = ncN === INGR.length
+    ? 'Enter what you have on hand now. After that, every sale takes its ingredients out automatically.'
+    : `${ncN} ingredient${ncN === 1 ? ' hasn’t' : 's haven’t'} been counted yet.`;
+  $('#iKpis').innerHTML = [['Stock value', money(INGR.reduce((a, i) => a + stockValue(i), 0))], ['Low or out', lowN], ['Ingredients used today', money(usedCost)], ['Not counted', ncN]]
+    .map(([l, v]) => `<div class="card kpi"><span class="eyebrow">${l}</span><span class="v ${l === 'Low or out' && v ? 'warn-text' : ''}">${v}</span></div>`).join('');
+  const makes = [];
+  MENU.forEach(m => m.variants.forEach(v => { if (v.recipe && v.recipe.length) { const c = canMake(v.recipe); if (c) makes.push({name: m.name + (v.label ? ' ' + v.label : ''), c}); } }));
+  $('#iMake').innerHTML = makes.length ? makes.map(({name, c}) => `<div class="make-row"><span class="mk-name">${esc(name)}</span>
+      <span class="mk-n ${c.uncounted ? '' : c.n === 0 ? 'out' : c.n <= 5 ? 'low' : ''}">${c.uncounted ? '—' : c.n.toLocaleString('en-PH')}</span>
+      <span class="mk-lim">${c.uncounted ? 'Count its ingredients to see this' : c.limit ? `${c.n === 0 ? 'Out of' : 'Runs out first:'} ${esc(c.limit.name)} (${fmtQty(Math.max(0, c.limit.stock), c.limit.unit)} left)` : ''}</span></div>`).join('')
+    : '<div class="empty">Add recipes to your menu items (Menu tab) to see how many you can still make.</div>';
+  $('#iFilter').innerHTML = [['all', 'All'], ['low', 'Low or out'], ['nc', 'Not counted']]
+    .map(([k, l]) => `<button class="chip ${invFilter === k ? 'on' : ''}" data-f="${k}" type="button">${l}</button>`).join('');
+  const list = INGR.filter(i => { const k = states.get(i.id).k; return invFilter === 'all' || (invFilter === 'low' ? k === 'low' || k === 'out' : k === 'nc'); })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  $('#iList').innerHTML = list.length ? list.map(i => { const st = states.get(i.id), uc = unitCost(i); return `<button class="ing-row" data-id="${i.id}" type="button">
+      <span class="ing-main"><b>${esc(i.name)}</b><small>${uc ? moneyUnit(uc) + ' per ' + esc(i.unit) : '<span class="warn-text">No cost set</span>'}</small></span>
+      <span class="ing-qty"><b class="${i.counted && i.stock <= 0 ? 'neg' : ''}">${onHand(i)}</b><small>${st.t ? `<span class="pill ${st.k}">${st.t}</span>` : money(stockValue(i))}</small></span></button>`; }).join('')
+    : `<div class="empty">${INGR.length ? 'Nothing in this filter.' : 'No ingredients yet. Tap “Add ingredient”.'}</div>`;
+}
+$('#iFilter').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { invFilter = b.dataset.f; renderInventory(); } });
+$('#iList').addEventListener('click', e => { const b = e.target.closest('.ing-row'); if (b) openIngredient(b.dataset.id); });
+$('#iCount').addEventListener('click', openBulkCount);
+$('#iNoticeBtn').addEventListener('click', openBulkCount);
+$('#iNew').addEventListener('click', () => openIngEditor(null, null));
+
+function openIngredient(id) {
+  const i = ingById(id); if (!i) return;
+  const st = ingState(i), uc = unitCost(i), log = INVLOG.filter(x => x.ing === i.id).slice(-8).reverse();
+  const recipes = MENU.filter(m => m.variants.some(v => (v.recipe || []).some(r => r.ing === i.id))).map(m => m.name)
+    .concat(ADDONS.filter(a => (a.recipe || []).some(r => r.ing === i.id)).map(a => a.name + ' (add-on)'));
+  const m = openModal(`<div class="m-head"><h2>${esc(i.name)}</h2>${st.t ? `<span class="pill ${st.k}">${st.t}</span>` : ''}</div>
+    <div class="ing-hero"><div><div class="eyebrow">On hand</div><div class="big-amt ${i.counted && i.stock <= 0 ? 'neg' : ''}">${onHand(i)}</div></div>
+      <div style="text-align:right"><div class="eyebrow">Value</div><div class="hero-v">${money(stockValue(i))}</div></div></div>
+    <div class="kv">
+      <span>Cost</span><b>${uc ? moneyUnit(uc) + ' per ' + esc(i.unit) : 'Not set'}</b>
+      <span>Pack</span><b>${i.packSize ? fmtQty(i.packSize, i.unit) + ' for ' + money(i.packCost) : 'Not set'}</b>
+      <span>Low alert at</span><b>${i.low ? fmtQty(i.low, i.unit) : 'Off'}</b>
+      <span>Used in sales today</span><b>${fmtQty(usedToday(i.id), i.unit)}</b>
+      <span>Used in</span><b>${recipes.length ? esc(recipes.join(', ')) : 'No recipes yet'}</b></div>
+    <div class="m-actions stack"><button class="primary" data-a="buy" type="button">Bought more</button>
+      <button class="ghost" data-a="count" type="button">Count</button><button class="ghost" data-a="waste" type="button">Record waste</button>
+      <button class="ghost" data-a="edit" type="button">Edit details</button></div>
+    ${log.length ? `<div class="field"><div class="label">Recent changes</div><div class="log">${log.map(x => `<div class="log-row"><span>${esc(LOGK[x.kind] || x.kind)}${x.note ? ' · ' + esc(x.note) : ''}<small>${fmtDate(x.ts)} ${fmtTime(x.ts)}</small></span>
+      <b class="${x.delta < 0 ? 'neg' : 'pos'}">${x.delta > 0 ? '+' : ''}${fmtQty(x.delta, i.unit)}</b></div>`).join('')}</div></div>` : ''}`);
+  m.addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const back = () => { renderInventory(); openIngredient(id); };
+    ({buy: openRestock, count: openCountOne, waste: openWaste, edit: openIngEditor})[b.dataset.a](i, back);
+  });
+}
+
+function openRestock(i, back) {
+  let paidTouched = false;
+  const m = openModal(`<h2>Bought more ${esc(i.name)}</h2>
+    <div class="two-in">
+      <div class="field"><label class="label" for="bPacks">Packs bought</label><input id="bPacks" type="number" min="0" step="any" inputmode="decimal" value="1"></div>
+      <div class="field"><label class="label" for="bSize">Size per pack (${esc(i.unit)})</label><input id="bSize" type="number" min="0" step="any" inputmode="decimal" value="${i.packSize || ''}"></div></div>
+    <div class="field"><label class="label" for="bPaid">Total paid (${esc(S.currency)})</label><input id="bPaid" type="number" min="0" step="0.01" inputmode="decimal" value="${i.packCost || ''}"></div>
+    <label class="check"><input type="checkbox" id="bUpd" checked> Use this price as the new cost in recipes</label>
+    ${i.counted ? '' : '<p class="hint">This ingredient hasn’t been counted, so on hand becomes the amount you bought. Use Count if you had some left.</p>'}
+    <div class="cost-sum" id="bSum"></div><p class="err" id="bErr" hidden></p>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="bOk" type="button">Add to stock</button></div>`);
+  modalOnClose = back;
+  const val = id => Math.max(0, parseFloat($(id, m).value) || 0);
+  const upd = () => {
+    if (!paidTouched) $('#bPaid', m).value = r2(val('#bPacks') * (i.packCost || 0)) || '';
+    const add = val('#bPacks') * val('#bSize'), paid = val('#bPaid');
+    $('#bSum', m).innerHTML = `<div class="sum"><span>Adding</span><span>+${fmtQty(add, i.unit)}</span></div>
+      <div class="sum b"><span>On hand after</span><span>${fmtQty((i.counted ? i.stock : 0) + add, i.unit)}</span></div>
+      ${add && paid ? `<div class="sum"><span>Price paid per ${esc(i.unit)}</span><span>${moneyUnit(paid / add)}</span></div>` : ''}`;
+  };
+  $('#bPacks', m).addEventListener('input', upd); $('#bSize', m).addEventListener('input', upd);
+  $('#bPaid', m).addEventListener('input', () => { paidTouched = true; upd(); });
+  $('#bOk', m).onclick = () => {
+    const packs = val('#bPacks'), size = val('#bSize'), paid = val('#bPaid'), add = packs * size;
+    if (!(add > 0)) { $('#bErr', m).textContent = 'Enter how many packs and the size of each pack.'; $('#bErr', m).hidden = false; return; }
+    i.stock = r4((i.counted ? i.stock : 0) + add); i.counted = true;
+    if ($('#bUpd', m).checked && paid > 0) { i.packSize = size; i.packCost = r2(paid / packs); }
+    logInv(i, 'restock', add, paid ? money(paid) : ''); saveInv(); closeModal();
+    toast(`Added ${fmtQty(add, i.unit)} of ${i.name}`);
+  };
+  upd();
+}
+
+function openCountOne(i, back) {
+  const m = openModal(`<h2>Count ${esc(i.name)}</h2>
+    <div class="field"><label class="label" for="cVal">Actual amount on hand (${esc(i.unit)})</label>
+      <input id="cVal" type="number" min="0" step="any" inputmode="decimal" value="${i.counted ? Math.max(0, i.stock) : ''}" placeholder="0"></div>
+    <p class="hint" id="cDiff"></p>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="cOk" type="button">Save count</button></div>`);
+  modalOnClose = back;
+  const diff = () => { const v = parseFloat($('#cVal', m).value); $('#cDiff', m).textContent = i.counted && !isNaN(v) ? `App expected ${fmtQty(i.stock, i.unit)}. Difference: ${v - i.stock > 0 ? '+' : ''}${fmtQty(v - i.stock, i.unit)}.` : ''; };
+  $('#cVal', m).addEventListener('input', diff); diff();
+  $('#cOk', m).onclick = () => {
+    const v = parseFloat($('#cVal', m).value); if (isNaN(v) || v < 0) { $('#cVal', m).focus(); return; }
+    logInv(i, i.counted ? 'count' : 'start', v - (i.counted ? i.stock : 0)); i.stock = r4(v); i.counted = true;
+    saveInv(); closeModal(); toast(`${i.name}: ${fmtQty(v, i.unit)} on hand`);
+  };
+}
+
+function openWaste(i, back) {
+  const reasons = ['Spilled', 'Expired', 'Staff drink', 'Sample', 'Other'];
+  let reason = reasons[0];
+  const m = openModal(`<h2>Record waste · ${esc(i.name)}</h2>
+    <div class="field"><label class="label" for="wVal">Amount wasted (${esc(i.unit)})</label><input id="wVal" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></div>
+    <div class="field"><div class="label">Reason</div><div class="chips" id="wWhy">${reasons.map(r => `<button type="button" class="chip" data-r="${r}">${r}</button>`).join('')}</div></div>
+    <p class="hint" id="wCost"></p>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="wOk" type="button">Remove from stock</button></div>`);
+  modalOnClose = back;
+  const upd = () => { $$('#wWhy .chip', m).forEach(b => b.classList.toggle('on', b.dataset.r === reason)); const v = parseFloat($('#wVal', m).value) || 0; $('#wCost', m).textContent = v ? `Cost of this waste: ${money(v * unitCost(i))}` : ''; };
+  $('#wWhy', m).onclick = e => { const b = e.target.closest('[data-r]'); if (b) { reason = b.dataset.r; upd(); } };
+  $('#wVal', m).addEventListener('input', upd);
+  $('#wOk', m).onclick = () => {
+    const v = parseFloat($('#wVal', m).value); if (!(v > 0)) { $('#wVal', m).focus(); return; }
+    i.stock = r4(i.stock - v); logInv(i, 'waste', -v, reason); saveInv(); closeModal(); toast(`Removed ${fmtQty(v, i.unit)} of ${i.name}`);
+  };
+  upd();
+}
+
+function openIngEditor(i, back) {
+  const isNew = !i;
+  const d = i ? Object.assign({}, i) : {id: uid(), name: '', unit: 'g', packCost: 0, packSize: 0, stock: 0, low: 0, counted: false};
+  const m = openModal(`<h2>${isNew ? 'Add ingredient' : 'Edit ' + esc(i.name)}</h2>
+    <div class="field"><label class="label" for="gName">Name</label><input id="gName" value="${esc(d.name)}" autocomplete="off" placeholder="e.g. Strawberry puree"></div>
+    <div class="field"><label class="label" for="gUnit">Unit you measure in</label><input id="gUnit" value="${esc(d.unit)}" autocomplete="off">
+      <div class="chips" id="gUnits">${['g', 'ml', 'pcs', 'kg', 'L', 'sachet'].map(u => `<button type="button" class="chip" data-u="${u}">${u}</button>`).join('')}</div></div>
+    <div class="two-in">
+      <div class="field"><label class="label" for="gSize">Pack size</label><input id="gSize" type="number" min="0" step="any" inputmode="decimal" value="${d.packSize || ''}" placeholder="e.g. 1000"></div>
+      <div class="field"><label class="label" for="gCost">Pack price (${esc(S.currency)})</label><input id="gCost" type="number" min="0" step="0.01" inputmode="decimal" value="${d.packCost || ''}" placeholder="0.00"></div></div>
+    <p class="hint" id="gUc"></p>
+    <div class="field"><label class="label" for="gLow">Warn me when stock drops to</label><input id="gLow" type="number" min="0" step="any" inputmode="decimal" value="${d.low || ''}" placeholder="Leave blank for no alert"></div>
+    ${isNew ? '<div class="field"><label class="label" for="gStock">On hand now (optional)</label><input id="gStock" type="number" min="0" step="any" inputmode="decimal" placeholder="Count it later if unsure"></div>' : ''}
+    <p class="err" id="gErr" hidden></p>
+    <div class="m-actions stack">${isNew ? '' : '<button class="ghost danger-text" id="gDel" type="button">Delete</button>'}
+      <button class="ghost" data-close type="button">Cancel</button><button class="primary" id="gOk" type="button">Save</button></div>`);
+  modalOnClose = back;
+  const uc = () => { const sz = parseFloat($('#gSize', m).value) || 0, c = parseFloat($('#gCost', m).value) || 0, u = $('#gUnit', m).value.trim() || 'unit';
+    $('#gUc', m).textContent = sz && c ? `Cost per ${u}: ${moneyUnit(c / sz)}` : 'Enter pack size and price to get the cost per unit.'; };
+  $('#gUnits', m).onclick = e => { const b = e.target.closest('[data-u]'); if (b) { $('#gUnit', m).value = b.dataset.u; uc(); } };
+  ['#gSize', '#gCost', '#gUnit'].forEach(id => $(id, m).addEventListener('input', uc)); uc();
+  $('#gOk', m).onclick = () => {
+    const name = $('#gName', m).value.trim(), err = $('#gErr', m);
+    if (!name) { err.textContent = 'Enter a name.'; err.hidden = false; return; }
+    if (INGR.some(x => x.id !== d.id && lc(x.name) === lc(name))) { err.textContent = `${name} is already in your inventory.`; err.hidden = false; return; }
+    d.name = name; d.unit = $('#gUnit', m).value.trim() || 'pcs';
+    d.packSize = Math.max(0, parseFloat($('#gSize', m).value) || 0); d.packCost = Math.max(0, r2(parseFloat($('#gCost', m).value) || 0));
+    d.low = Math.max(0, parseFloat($('#gLow', m).value) || 0);
+    if (isNew) {
+      const st = $('#gStock', m).value; if (st !== '' && parseFloat(st) >= 0) { d.stock = parseFloat(st); d.counted = true; }
+      INGR.push(d); if (d.counted) logInv(d, 'start', d.stock);
+    } else Object.assign(i, d);
+    saveInv(); closeModal(); if (!back) renderInventory(); toast(isNew ? 'Ingredient added' : 'Saved');
+  };
+  if (!isNew) $('#gDel', m).onclick = async () => {
+    const used = MENU.filter(x => x.variants.some(v => (v.recipe || []).some(r => r.ing === i.id))).length + ADDONS.filter(a => (a.recipe || []).some(r => r.ing === i.id)).length;
+    if (await confirmBox({title: `Delete ${i.name}?`, body: used ? `It will also be removed from ${used} recipe${used === 1 ? '' : 's'}, which lowers their cost.` : 'Its stock history is removed too.', ok: 'Delete ingredient', danger: true})) {
+      INGR = INGR.filter(x => x.id !== i.id);
+      MENU.forEach(x => x.variants.forEach(v => { if (v.recipe) v.recipe = v.recipe.filter(r => r.ing !== i.id); }));
+      ADDONS.forEach(a => { if (a.recipe) a.recipe = a.recipe.filter(r => r.ing !== i.id); });
+      INVLOG = INVLOG.filter(x => x.ing !== i.id);
+      saveInv(); saveMenu(); renderInventory(); toast('Ingredient deleted');
+    }
+  };
+}
+
+function openBulkCount() {
+  const list = INGR.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const m = openModal(`<div><h2>Count stock</h2><p class="muted">Enter what you have on hand right now. Leave a line blank to keep it as it is.</p></div>
+    <div class="count-list">${list.map(i => `<label class="count-row" for="cnt-${i.id}"><span><b>${esc(i.name)}</b><small>${i.counted ? 'App says ' + fmtQty(i.stock, i.unit) : 'Not counted yet'}</small></span>
+      <input id="cnt-${i.id}" data-id="${i.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="${i.counted ? fmtNum(Math.max(0, i.stock)) : 'Amount'}"><span class="ru">${esc(i.unit)}</span></label>`).join('')}</div>
+    <div class="m-actions stack"><button class="ghost" data-close type="button">Cancel</button><button class="primary" id="cntOk" type="button">Save count</button></div>`, true);
+  $('#cntOk', m).onclick = () => {
+    let n = 0;
+    $$('.count-list input', m).forEach(inp => {
+      if (inp.value === '') return; const v = parseFloat(inp.value); if (isNaN(v) || v < 0) return;
+      const i = ingById(inp.dataset.id); if (!i) return;
+      logInv(i, i.counted ? 'count' : 'start', v - (i.counted ? i.stock : 0)); i.stock = r4(v); i.counted = true; n++;
+    });
+    saveInv(); closeModal(); renderInventory(); toast(n ? `Saved count for ${n} ingredient${n === 1 ? '' : 's'}` : 'Nothing changed');
   };
 }
 
@@ -1262,7 +1727,7 @@ async function renderAppStatus() {
     : ['bad', 'Opened as a local file. Put the folder online once (see setup steps) to install it on iPhone.']);
   if (isIOS) rows.push(isStandalone() ? ['ok', 'Installed on the Home Screen.'] : hasBT ? ['', 'Running in a Bluetooth browser. Bookmark this page for quick access.'] : ['bad', 'Not installed yet. In Safari tap Share, then Add to Home Screen.']);
   try { if (navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()) rows.push(['ok', 'Storage is protected from automatic clean-up.']); } catch (e) {}
-  rows.push(['', `${ORDERS.length} orders and ${MENU.length} menu items stored.`]);
+  rows.push(['', `${ORDERS.length} orders, ${MENU.length} menu items and ${INGR.length} ingredients stored.`]);
   $('#appStatus').innerHTML = rows.map(([c, t]) => `<div class="st"><span class="dot ${c}"></span><span>${esc(t)}</span></div>`).join('');
 }
 function renderSettings() {
@@ -1286,7 +1751,7 @@ $('#testPrint').addEventListener('click', () => {
   printSpecs([receiptSpec(o, true)], 'test-receipt');
 });
 $('#dBackup').addEventListener('click', () => {
-  saveFile(`coffee-pos-backup-${today()}.json`, JSON.stringify({app: 'coffee-pos', v: 1, savedAt: new Date().toISOString(), settings: S, menu: MENU, addons: ADDONS, orders: ORDERS, seq: SEQ}), 'application/json');
+  saveFile(`coffee-pos-backup-${today()}.json`, JSON.stringify({app: 'coffee-pos', v: 2, savedAt: new Date().toISOString(), settings: S, menu: MENU, addons: ADDONS, orders: ORDERS, seq: SEQ, ingredients: INGR, invlog: INVLOG}), 'application/json');
 });
 $('#dRestore').addEventListener('click', () => $('#dFile').click());
 $('#dFile').addEventListener('change', e => {
@@ -1295,20 +1760,21 @@ $('#dFile').addEventListener('change', e => {
   fr.onload = async () => {
     let d; try { d = JSON.parse(fr.result); } catch (err) { toast('That file is not a valid backup.'); return; }
     if (!d || d.app !== 'coffee-pos' || !Array.isArray(d.menu) || !Array.isArray(d.orders)) { toast('That file is not a Coffee Counter POS backup.'); return; }
-    if (await confirmBox({title: 'Restore this backup?', body: `It has ${d.orders.length} orders and ${d.menu.length} menu items, saved ${esc(new Date(d.savedAt).toLocaleString('en-PH'))}. Everything currently on this phone will be replaced.`, ok: 'Restore', danger: true})) {
+    if (await confirmBox({title: 'Restore this backup?', body: `It has ${d.orders.length} orders, ${d.menu.length} menu items${Array.isArray(d.ingredients) ? ` and ${d.ingredients.length} ingredients` : ''}, saved ${esc(new Date(d.savedAt).toLocaleString('en-PH'))}. Everything currently on this phone will be replaced.`, ok: 'Restore', danger: true})) {
       S = Object.assign({}, DEFAULT_SETTINGS, d.settings); MENU = d.menu; ADDONS = d.addons || []; ORDERS = d.orders; SEQ = d.seq || {date: '', n: 0};
-      saveSettings(); saveMenu(); saveOrders(); renderHeader(); renderSettings(); toast('Backup restored');
+      if (Array.isArray(d.ingredients)) { INGR = d.ingredients; INVLOG = d.invlog || []; }
+      saveSettings(); saveMenu(); saveOrders(); saveInv(); renderHeader(); renderSettings(); toast('Backup restored');
     }
   };
   fr.readAsText(file);
 });
 $('#dResetMenu').addEventListener('click', async () => {
-  if (await confirmBox({title: 'Replace your menu with the sample?', body: 'Your current items and add-ons will be replaced. Sales are not affected.', ok: 'Replace menu', danger: true})) {
-    MENU = sampleMenu(); ADDONS = sampleAddons(); saveMenu(); renderAppStatus(); toast('Sample menu loaded');
+  if (await confirmBox({title: 'Reset to the starter menu?', body: 'Your items and add-ons are replaced with the four drinks and recipes from your costing sheet. Sales and inventory are not affected.', ok: 'Reset menu', danger: true})) {
+    MENU = starterMenu(); ADDONS = starterAddons(); saveMenu(); renderAppStatus(); toast('Starter menu loaded');
   }
 });
 $('#dClear').addEventListener('click', async () => {
-  if (await confirmBox({title: 'Delete all sales?', body: `This permanently removes ${ORDERS.length} orders from this phone and restarts order numbers. Save a backup first if you need the records.`, ok: 'Delete all sales', danger: true})) {
+  if (await confirmBox({title: 'Delete all sales?', body: `This permanently removes ${ORDERS.length} orders from this phone and restarts order numbers. Inventory stays as it is. Save a backup first if you need the records.`, ok: 'Delete all sales', danger: true})) {
     ORDERS = []; SEQ = {date: '', n: 0}; saveOrders(); renderHeader(); renderAppStatus(); toast('All sales deleted');
   }
 });
