@@ -188,7 +188,7 @@ main{padding-bottom:calc(var(--tb) + var(--sab) + 84px)}
 .m-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .m-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
 .m-actions.stack{display:grid;grid-template-columns:1fr 1fr}
-.m-actions.stack .primary{grid-column:1/-1}
+.m-actions.stack .primary,.m-actions.stack .span{grid-column:1/-1}
 .m-actions .spacer{flex:1}
 .m-foot{display:flex;gap:12px;align-items:center}
 .m-foot .primary{flex:1;min-height:56px;font-size:17px}
@@ -325,7 +325,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
 .r-row span:last-child{text-align:right;white-space:nowrap}
 .r-ind{padding-left:3ch}
 .r-c{text-align:center;overflow-wrap:anywhere}
-.r-s{font-size:.88em}.r-l{font-size:1.3em}.r-xl{font-size:2.6em;line-height:1.1}
+.r-s{font-size:.88em}.r-ml{font-size:1.15em}.r-l{font-size:1.3em}.r-xl{font-size:2.6em;line-height:1.1}
 .r-b{font-weight:700}
 .r-hr{border-top:1px dashed #000;margin:6px 0}
 .r-gap{height:1.4em}
@@ -468,7 +468,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
             <div class="field"><label class="label" for="s-paper">Paper width</label>
               <select id="s-paper" data-key="paper"><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
             <label class="check"><input type="checkbox" id="s-autoPrint" data-key="autoPrint"> Print receipt right after each sale</label>
-            <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Also print a barista ticket</label>
+            <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Include the barista ticket in the same print</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-cutPaper" data-key="cutPaper"> Cut paper after printing (printers with a cutter)</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-btSlow" data-key="btSlow"> Slow mode (try this if receipts print garbled or cut off)</label>
           </div>
@@ -568,7 +568,7 @@ try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } 
 
 /* ================= data ================= */
 const DEFAULT_SETTINGS = {shopName: 'Pop-Up Coffee', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
-  notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: false,
+  notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
 const SHEET_INGR = [ // name, unit, pack cost, pack size
@@ -608,6 +608,7 @@ let S, MENU, ADDONS, ORDERS, SEQ, cart, INGR, INVLOG;
 function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
+  if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
   ORDERS = store.get('orders', []);
   SEQ = store.get('seq', {date: '', n: 0});
   cart = Object.assign(emptyCart(), store.get('cart', {}));
@@ -728,9 +729,9 @@ function receiptSpec(o, test) {
   if (S.address) R.push({k: 'c', t: S.address});
   if (S.contact) R.push({k: 'c', t: S.contact});
   R.push({k: 'hr'});
-  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: fmtDate(o.ts)});
-  R.push({k: 'lr', l: o.customer ? o.customer : '', r: fmtTime(o.ts)});
+  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: fmtDate(o.ts) + ' ' + fmtTime(o.ts)});
   if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
+  R.push({k: 't', t: 'Name: ' + (o.customer || '____________________'), b: 1, sz: 'ml'});
   if (o.voided) R.push({k: 'c', t: '*** VOIDED ***', b: 1});
   R.push({k: 'hr'});
   o.lines.forEach(l => {
@@ -753,7 +754,7 @@ function receiptSpec(o, test) {
 }
 function baristaSpec(o) {
   const R = [{k: 'c', t: 'BARISTA TICKET', b: 1}, {k: 'c', t: '#' + pad3(o.no), sz: 'xl', b: 1}];
-  if (o.customer) R.push({k: 'c', t: o.customer, sz: 'l', b: 1});
+  R.push(o.customer ? {k: 'c', t: o.customer, sz: 'l', b: 1} : {k: 'c', t: 'Name: ______________', sz: 'ml', b: 1});
   R.push({k: 'c', t: fmtTime(o.ts)}, {k: 'hr'});
   o.lines.forEach(l => {
     R.push({k: 't', t: l.qty + ' x ' + l.name + (l.variant ? ' ' + l.variant : ''), b: 1, sz: 'l'});
@@ -799,7 +800,7 @@ function previewPaper(el) {
 /* Draws a spec onto a white canvas `W` dots wide (384 = 58mm, 576 = 80mm at 203 dpi). */
 function specToCanvas(spec, W) {
   const base = W >= 576 ? 26 : 22;
-  const SZ = {s: Math.round(base * .86), m: base, l: Math.round(base * 1.3), xl: Math.round(base * 2.6)};
+  const SZ = {s: Math.round(base * .86), m: base, ml: Math.round(base * 1.15), l: Math.round(base * 1.3), xl: Math.round(base * 2.6)};
   const pad = Math.round(base * .4), inner = W - pad * 2;
   const fam = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
   const fontOf = r => `${r.b ? 700 : 500} ${SZ[r.sz || 'm']}px ${fam}`;
@@ -947,12 +948,15 @@ function printSpecs(specs, name) {
   else if (S.printMode === 'share') printShare(specs, name);
   else printDialog(specs);
 }
-function printOrder(o, which) {
-  const specs = [];
-  if (which.receipt) specs.push(receiptSpec(o));
-  if (which.barista) specs.push(baristaSpec(o));
-  printSpecs(specs, 'order-' + pad3(o.no));
+const TEAR = [{k: 'gap'}, {k: 'hr'}, {k: 'c', t: 'TEAR HERE', sz: 's'}, {k: 'hr'}, {k: 'gap'}];
+/* Receipt and barista ticket go out as ONE print: one image, one dialog page, or one Bluetooth job.
+   With a Bluetooth printer that has a cutter, the paper is cut between them instead of a tear line. */
+function orderSpecs(o, which, test) {
+  const r = which.receipt ? receiptSpec(o, test) : null, b = which.barista ? baristaSpec(o) : null;
+  if (r && b) return S.printMode === 'bluetooth' && S.cutPaper ? [r, b] : [r.concat(TEAR, b)];
+  return [r || b].filter(Boolean);
 }
+function printOrder(o, which) { printSpecs(orderSpecs(o, which), 'order-' + pad3(o.no)); }
 
 /* ================= header + nav ================= */
 function renderHeader() {
@@ -1239,9 +1243,11 @@ function showDone(o) {
       ${cash ? `<div class="label">Change</div><div class="big-amt">${money(o.change)}</div><div class="muted">${money(o.tendered)} cash received</div>`
              : `<div class="big-amt">${money(o.total)}</div><div class="muted">Paid via ${esc(o.method)}</div>`}</div>
     <div class="paper" id="dPaper">${specToHTML(receiptSpec(o))}</div>
-    <div class="m-actions stack"><button class="ghost" id="dRcpt" type="button">Print receipt</button><button class="ghost" id="dBar" type="button">Barista ticket</button>
+    <div class="m-actions stack"><button class="ghost span" id="dBoth" type="button">Print receipt + barista ticket</button>
+      <button class="ghost" id="dRcpt" type="button">Receipt only</button><button class="ghost" id="dBar" type="button">Ticket only</button>
       <button class="primary" data-close type="button">New order</button></div>`, true);
   previewPaper($('#dPaper', m));
+  $('#dBoth', m).onclick = () => printOrder(o, {receipt: true, barista: true});
   $('#dRcpt', m).onclick = () => printOrder(o, {receipt: true});
   $('#dBar', m).onclick = () => printOrder(o, {barista: true});
 }
@@ -1270,8 +1276,10 @@ $('#oList').addEventListener('click', e => {
     <div class="paper" id="vPaper">${specToHTML(receiptSpec(o))}</div>
     <div class="m-actions stack"><button class="ghost" id="vBar" type="button">Barista ticket</button>
       ${o.voided ? '<span></span>' : '<button class="ghost danger-text" id="vVoid" type="button">Void order</button>'}
+      <button class="ghost span" id="vBoth" type="button">Reprint receipt + barista ticket</button>
       <button class="primary" id="vPrint" type="button">Reprint receipt</button></div>`, true);
   previewPaper($('#vPaper', m));
+  $('#vBoth', m).onclick = () => printOrder(o, {receipt: true, barista: true});
   $('#vPrint', m).onclick = () => printOrder(o, {receipt: true});
   $('#vBar', m).onclick = () => printOrder(o, {barista: true});
   if (!o.voided) $('#vVoid', m).onclick = async () => {
@@ -1748,7 +1756,7 @@ $('#testPrint').addEventListener('click', () => {
   const o = {no: 0, ts: Date.now(), customer: 'Test', method: 'Cash', tendered: 500, ref: '', voided: false, disc: 0, discLabel: '',
     lines: [{name: 'Café Latte', variant: '16 oz', price: 150, addons: [{name: 'Oat milk', price: 35}], qty: 1, note: 'less ice'}, {name: 'Butter Croissant', variant: '', price: 95, addons: [], qty: 2, note: ''}]};
   o.sub = o.lines.reduce((a, l) => a + lineTotal(l), 0); o.total = o.sub; o.change = r2(o.tendered - o.total);
-  printSpecs([receiptSpec(o, true)], 'test-receipt');
+  printSpecs(orderSpecs(o, {receipt: true, barista: S.baristaTicket}, true), 'test-receipt');
 });
 $('#dBackup').addEventListener('click', () => {
   saveFile(`coffee-pos-backup-${today()}.json`, JSON.stringify({app: 'coffee-pos', v: 2, savedAt: new Date().toISOString(), settings: S, menu: MENU, addons: ADDONS, orders: ORDERS, seq: SEQ, ingredients: INGR, invlog: INVLOG}), 'application/json');
