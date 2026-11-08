@@ -495,7 +495,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <div class="field"><label class="label" for="s-niimShiftY">Move print up / down (mm)</label><input id="s-niimShiftY" data-key="niimShiftY" type="number" step="0.5" min="-5" max="5" inputmode="decimal"></div></div>
             <p class="hint" data-niim-only>Negative moves left or up. Change it, then use Test print until the receipt sits in the middle of the label.</p>
             <div class="field" data-niim-only><label class="label" for="s-niimSend">Bluetooth sending</label>
-              <select id="s-niimSend" data-key="niimSend"><option value="reliable">Confirmed (reliable, recommended)</option><option value="fast">Fast (may drop data on iPhone)</option></select>
+              <select id="s-niimSend" data-key="niimSend"><option value="balanced">Balanced (fast and safe, recommended)</option><option value="reliable">Confirmed (slowest, safest)</option><option value="fast">Fast (may cause data errors on iPhone)</option></select>
               <p class="hint" id="niimMode"></p></div>
             <div class="field" data-niim-only><label class="label" for="s-niimTask">Printer protocol</label>
               <select id="s-niimTask" data-key="niimTask"><option value="auto">Automatic (recommended)</option><option value="D110">D110</option><option value="B21_V1">B21 V1</option><option value="B1">B1</option><option value="D110M_V4">D110M V4</option></select>
@@ -611,7 +611,7 @@ const store = {
 try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } catch (e) { storageOK = false; }
 
 /* ================= data ================= */
-const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'reliable', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
+const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'balanced', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
   notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
@@ -653,7 +653,7 @@ function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
   if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
-  if (!S.niimSend) S.niimSend = 'reliable';
+  if (!S.niimV11) { S.niimSend = 'balanced'; S.niimV11 = true; store.set('settings', S); }
   if (!S.niimV8) { if (S.niimShiftX == null || S.niimShiftX === '') S.niimShiftX = '-3'; if (S.niimShiftY == null || S.niimShiftY === '') S.niimShiftY = '0'; S.niimTask = S.niimTask || 'auto'; S.niimV8 = true; store.set('settings', S); }
   if (!S.niimV5) { S.paper = 'l5080'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
   if (!S.brandV4) { if (!S.shopName || S.shopName === 'Pop-Up Coffee') S.shopName = 'Eyes Wide Open'; S.printLogo = true; S.brandV4 = true; store.set('settings', S); }
@@ -1057,15 +1057,23 @@ const NIIM_ERR = {1: 'The lid is open. Close it firmly.', 2: 'Out of labels, or 
   5: 'Printing was cancelled on the printer.', 6: 'The label data arrived damaged over Bluetooth. Keep the phone close to the printer and tap Try again.',
   7: 'The printer is too hot. Wait a minute.', 8: 'Paper problem. Open the lid, check the roll, close it.', 9: 'The printer is busy. Wait a few seconds and try again.',
   16: 'Wrong label type for this printer.', 52: 'The printer waited too long for data. Tap Try again.'};
-/* Make every Bluetooth write wait for the printer's confirmation, so no chunk of the label is silently dropped. */
+/* Bluetooth pacing. The library fires every chunk without waiting, and iPhone browsers drop chunks when their
+   buffer fills (printer "data error"). Balanced: send freely but wait for the printer's confirmation every 8th
+   chunk, which keeps the phone from running ahead. Confirmed: wait on every chunk (safest, slowest). */
 function niimReliable() {
   const c = NB.client, ch = c && c.channel;
   if (!ch) return;
+  if (!ch.__orig) ch.__orig = ch.writeValueWithoutResponse.bind(ch);
   const canConfirm = ch.properties && ch.properties.write && typeof ch.writeValueWithResponse === 'function';
-  if (S.niimSend !== 'fast' && canConfirm) {
-    if (!ch.__confirmed) { ch.writeValueWithoutResponse = ch.writeValueWithResponse.bind(ch); ch.__confirmed = true; }
-    c.setPacketInterval(1); NB.mode = 'confirmed';
-  } else { c.setPacketInterval(isIOS ? 35 : 10); NB.mode = 'paced'; }
+  const mode = NB.forceConfirmed ? 'reliable' : (S.niimSend || 'balanced');
+  let n = 0;
+  if (canConfirm && mode === 'reliable') {
+    ch.writeValueWithoutResponse = d => ch.writeValueWithResponse(d); c.setPacketInterval(0); NB.mode = 'confirmed';
+  } else if (canConfirm && mode === 'balanced') {
+    ch.writeValueWithoutResponse = d => (++n % 8 === 0 ? ch.writeValueWithResponse(d) : ch.__orig(d)); c.setPacketInterval(0); NB.mode = 'balanced';
+  } else {
+    ch.writeValueWithoutResponse = ch.__orig; c.setPacketInterval(mode === 'fast' ? 10 : (isIOS ? 25 : 10)); NB.mode = 'paced';
+  }
 }
 function niimError(e) {
   if (e && e.code != null && NIIM_ERR[e.code]) return NIIM_ERR[e.code] + ` (printer code ${e.code})`;
@@ -1115,7 +1123,16 @@ function printNiimbot(pages) {
   });
   NB.busy = job.catch(() => {});
   job.then(() => pstat('ok', n > 1 ? `Printed ${n} labels` : 'Printed', n > 1 ? 'Receipt and barista ticket are done' : 'Done'),
-    e => { console.error(e); pstat('bad', 'Print failed', niimError(e), null, again); });
+    e => {
+      console.error(e);
+      const code = e && (e.code != null ? e.code : +((/Print error (\d+)/.exec(e.message || '') || [])[1]));
+      if (code === 6 && NB.mode === 'balanced' && !NB.forceConfirmed) {
+        NB.forceConfirmed = true;   // for the rest of this session: confirm every chunk
+        pstat('', 'Retrying with safer sending…', 'Some data was lost over Bluetooth, so this print is slower', 1);
+        setTimeout(again, 1500); return;
+      }
+      pstat('bad', 'Print failed', niimError(e), null, again);
+    });
 }
 
 /* ---------- Share sheet (AirPrint, printer apps, Save Image) ---------- */
@@ -1927,7 +1944,7 @@ function renderPrinter() {
   $('#btDot').className = 'dot ' + (on ? 'ok' : 'bad');
   $('#btStatus').textContent = on ? 'Connected to ' + (dev.name || 'printer') : (dev ? 'Printer disconnected' : 'No printer connected');
   $('#btConnect').textContent = on ? 'Change printer' : (dev ? 'Reconnect' : 'Connect printer');
-  const nmEl = $('#niimMode'); if (nmEl) nmEl.textContent = nm && nbConnected() ? (NB.mode === 'confirmed' ? 'Connected: every chunk is confirmed by the printer.' : 'Connected: this printer can’t confirm chunks, so data is sent slowly instead.') : '';
+  const nmEl = $('#niimMode'); if (nmEl) nmEl.textContent = nm && nbConnected() ? ({confirmed: 'Connected: every chunk is confirmed by the printer.', balanced: 'Connected: sending quickly, with the printer confirming every 8th chunk.'}[NB.mode] || 'Connected: this printer can’t confirm chunks, so data is paced instead.') : '';
 }
 async function renderAppStatus() {
   const rows = [];
@@ -1949,7 +1966,7 @@ $('#v-settings').addEventListener('input', e => {
   const el = e.target.closest('[data-key]'); if (!el) return;
   S[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
   saveSettings(); renderHeader();
-  if (el.dataset.key === 'niimSend' && nbConnected()) { niimReliable(); renderPrinter(); }
+  if (el.dataset.key === 'niimSend') { NB.forceConfirmed = false; if (nbConnected()) { niimReliable(); renderPrinter(); } }
 });
 $('#pmSeg').addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (!b) return; S.printMode = b.dataset.pm; saveSettings(); renderPrinter(); });
 $('#btConnect').addEventListener('click', () => {
