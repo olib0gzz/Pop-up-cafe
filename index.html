@@ -747,7 +747,7 @@ function receiptSpec(o, test) {
   if (S.address) R.push({k: 'c', t: S.address});
   if (S.contact) R.push({k: 'c', t: S.contact});
   R.push({k: 'hr'});
-  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: new Date(o.ts).toLocaleDateString('en-PH', {month: 'numeric', day: 'numeric', year: '2-digit'}) + ' ' + fmtTime(o.ts)});
+  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: new Date(o.ts).toLocaleDateString('en-PH', {month: 'numeric', day: 'numeric'}) + ' ' + fmtTime(o.ts)});
   if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
   R.push({k: 't', t: 'Name: ' + (o.customer || '____________________'), b: 1, sz: 'ml'});
   if (o.voided) R.push({k: 'c', t: '*** VOIDED ***', b: 1});
@@ -1006,6 +1006,7 @@ async function niimConnect(pick) {
   }
   if (NB.client) { try { await NB.client.disconnect(); } catch (e) {} }
   NB.client = L.instantiateClient('bluetooth');
+  try { NB.client.setPacketInterval(isIOS ? 20 : 10); } catch (e) {}   // a little slower on iPhone so no packets are dropped
   NB.client.on('disconnect', () => { if (view === 'settings') renderPrinter(); });
   await NB.client.connect({authorizedDevice: NB.device});
   if (view === 'settings') renderPrinter();
@@ -1025,19 +1026,24 @@ function printNiimbot(pages) {
     const L = window.niimbluelib, c = NB.client, meta = c.getModelMetadata();
     const dir = (meta && meta.printDirection) || 'top';
     const taskName = (S.niimTask && S.niimTask !== 'auto') ? S.niimTask : (c.getPrintTaskType() || 'D110');
-    // One print job per label: the B21S's protocol doesn't announce a page count, so multi-label jobs repeat or error.
-    for (const cv of pages) {
-      const task = c.protocol.newPrintTask(taskName, {
-        totalPages: 1, density: +S.niimDensity || 3, labelType: L.LabelType.WithGaps,
-        pageColor: L.PageColorType.SingleColor, statusPollIntervalMs: 150, statusTimeoutMs: 10000});
-      try {
-        await task.printInit();
+    // Same sequence as the NiimBlue app: stop the 2-second status heartbeat while printing (it interleaves with
+    // image data and causes "data error"), send all labels in one job, then turn the heartbeat back on.
+    c.stopHeartbeat();
+    const task = c.protocol.newPrintTask(taskName, {
+      totalPages: pages.length, density: +S.niimDensity || 3, labelType: L.LabelType.WithGaps,
+      pageColor: L.PageColorType.SingleColor, statusPollIntervalMs: 100, statusTimeoutMs: 8000});
+    let err = null;
+    try {
+      await task.printInit();
+      for (const cv of pages) {
         await task.printPage(L.ImageEncoder.encodeCanvas(cv, L.PageColorType.SingleColor, dir), 1);
         await task.waitForPageFinished();
-        await task.waitForFinished();
-      } finally { try { await task.printEnd(); } catch (e) {} }
-      await sleep(400);
-    }
+      }
+      await task.waitForFinished();
+    } catch (e) { err = e; }
+    try { await task.printEnd(); } catch (e) { if (!err) err = e; }
+    try { c.startHeartbeat(); } catch (e) {}
+    if (err) throw err;
   });
   NB.busy = job.catch(() => {});
   job.then(() => toast(pages.length > 1 ? `Printed ${pages.length} labels` : 'Printed'), e => { console.error(e); toast(niimError(e), 5000); });
