@@ -471,6 +471,13 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <select id="s-paper" data-key="paper"><option value="l5080">Label 50 × 80 mm (Niimbot T50*80)</option><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
             <div class="field" data-niim-only><label class="label" for="s-niimDensity">Print darkness</label>
               <select id="s-niimDensity" data-key="niimDensity"><option value="1">1 · Lightest</option><option value="2">2</option><option value="3">3 · Normal</option><option value="4">4</option><option value="5">5 · Darkest</option></select></div>
+            <div class="two-in" data-niim-only>
+              <div class="field"><label class="label" for="s-niimShiftX">Move print left / right (mm)</label><input id="s-niimShiftX" data-key="niimShiftX" type="number" step="0.5" min="-3" max="3" inputmode="decimal"></div>
+              <div class="field"><label class="label" for="s-niimShiftY">Move print up / down (mm)</label><input id="s-niimShiftY" data-key="niimShiftY" type="number" step="0.5" min="-5" max="5" inputmode="decimal"></div></div>
+            <p class="hint" data-niim-only>Negative moves left or up. Change it, then use Test print until the receipt sits in the middle of the label.</p>
+            <div class="field" data-niim-only><label class="label" for="s-niimTask">Printer protocol</label>
+              <select id="s-niimTask" data-key="niimTask"><option value="auto">Automatic (recommended)</option><option value="D110">D110</option><option value="B21_V1">B21 V1</option><option value="B1">B1</option><option value="D110M_V4">D110M V4</option></select>
+              <p class="hint">Only change this if labels repeat, print blank or show a data error. Try one, then Test print.</p></div>
             <label class="check"><input type="checkbox" id="s-autoPrint" data-key="autoPrint"> Print receipt right after each sale</label>
             <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Include the barista ticket in the same print</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-cutPaper" data-key="cutPaper"> Cut paper after printing (printers with a cutter)</label>
@@ -575,7 +582,7 @@ const store = {
 try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } catch (e) { storageOK = false; }
 
 /* ================= data ================= */
-const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
+const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
   notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
@@ -617,6 +624,7 @@ function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
   if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
+  if (!S.niimV8) { if (S.niimShiftX == null || S.niimShiftX === '') S.niimShiftX = '-3'; if (S.niimShiftY == null || S.niimShiftY === '') S.niimShiftY = '0'; S.niimTask = S.niimTask || 'auto'; S.niimV8 = true; store.set('settings', S); }
   if (!S.niimV5) { S.paper = 'l5080'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
   if (!S.brandV4) { if (!S.shopName || S.shopName === 'Pop-Up Coffee') S.shopName = 'Eyes Wide Open'; S.printLogo = true; S.brandV4 = true; store.set('settings', S); }
   ORDERS = store.get('orders', []);
@@ -869,12 +877,14 @@ const isLabel = () => S.paper === 'l5080';
 function labelPage(src, sy, sh, center, W) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = LABEL.h;
   const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, W, LABEL.h);
-  const top = center ? Math.max(LABEL.m, Math.round((LABEL.h - sh) / 2)) : LABEL.m;
-  c.drawImage(src, 0, sy, src.width, sh, Math.round((W - src.width) / 2), top, src.width, sh);
+  const room = Math.floor((W - src.width) / 2), mm = v => Math.round((parseFloat(v) || 0) * 8);   // 8 dots per mm
+  const dx = Math.max(-room, Math.min(room, mm(S.niimShiftX))), dy = Math.max(-40, Math.min(40, mm(S.niimShiftY)));
+  const top = (center ? Math.max(LABEL.m, Math.round((LABEL.h - sh) / 2)) : LABEL.m) + dy;
+  c.drawImage(src, 0, sy, src.width, sh, room + dx, top, src.width, sh);
   return cv;
 }
 function labelPages(spec, W) {
-  const avail = LABEL.h - LABEL.m * 2, CW = 384;   // draw inside the printable 48 mm, centred on the 50 mm label
+  const avail = LABEL.h - LABEL.m * 2, CW = 336;   // 42 mm of content: leaves room to nudge left/right on the 48 mm print head
   // Keep the logo a good size first, then use the biggest text that still fits.
   for (const [logoK, hi, lo] of [[.8, 26, 19], [.65, 22, 16], [.5, 17, 15]]) {
     for (let base = hi; base >= lo; base--) {
@@ -1014,14 +1024,20 @@ function printNiimbot(pages) {
   const job = NB.busy.then(() => ready).then(async () => {
     const L = window.niimbluelib, c = NB.client, meta = c.getModelMetadata();
     const dir = (meta && meta.printDirection) || 'top';
-    const task = c.protocol.newPrintTask(c.getPrintTaskType() || 'D110', {
-      totalPages: pages.length, density: +S.niimDensity || 3, labelType: L.LabelType.WithGaps,
-      pageColor: L.PageColorType.SingleColor, statusPollIntervalMs: 100, statusTimeoutMs: 8000});
-    try {
-      await task.printInit();
-      for (const cv of pages) { await task.printPage(L.ImageEncoder.encodeCanvas(cv, L.PageColorType.SingleColor, dir), 1); await task.waitForPageFinished(); }
-      await task.waitForFinished();
-    } finally { try { await task.printEnd(); } catch (e) {} }
+    const taskName = (S.niimTask && S.niimTask !== 'auto') ? S.niimTask : (c.getPrintTaskType() || 'D110');
+    // One print job per label: the B21S's protocol doesn't announce a page count, so multi-label jobs repeat or error.
+    for (const cv of pages) {
+      const task = c.protocol.newPrintTask(taskName, {
+        totalPages: 1, density: +S.niimDensity || 3, labelType: L.LabelType.WithGaps,
+        pageColor: L.PageColorType.SingleColor, statusPollIntervalMs: 150, statusTimeoutMs: 10000});
+      try {
+        await task.printInit();
+        await task.printPage(L.ImageEncoder.encodeCanvas(cv, L.PageColorType.SingleColor, dir), 1);
+        await task.waitForPageFinished();
+        await task.waitForFinished();
+      } finally { try { await task.printEnd(); } catch (e) {} }
+      await sleep(400);
+    }
   });
   NB.busy = job.catch(() => {});
   job.then(() => toast(pages.length > 1 ? `Printed ${pages.length} labels` : 'Printed'), e => { console.error(e); toast(niimError(e), 5000); });
