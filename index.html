@@ -979,7 +979,8 @@ async function niimConnect(pick) {
   if (!hasBT) throw new Error('nobt');
   if (!L) throw new Error('nolib');
   if (!NB.device || pick) {   // first await in the tap, so the Bluetooth chooser is allowed to open
-    NB.device = await navigator.bluetooth.requestDevice({filters: ['B', 'D', 'H', 'K', 'A', 'N', 'S', 'P', 'E', 'T'].map(l => ({namePrefix: l})).concat([{services: [NIIM_SERVICE]}]), optionalServices: [NIIM_SERVICE]});
+    // List every nearby Bluetooth device: name filters hide the B21S in some iPhone browsers. Pick the one named B21S-…
+    NB.device = await navigator.bluetooth.requestDevice({acceptAllDevices: true, optionalServices: [NIIM_SERVICE]});
   }
   if (NB.client) { try { await NB.client.disconnect(); } catch (e) {} }
   NB.client = L.instantiateClient('bluetooth');
@@ -989,7 +990,8 @@ async function niimConnect(pick) {
 }
 function niimError(e) {
   const n = e && (e.message || e.name || String(e));
-  if (e && e.name === 'NotFoundError') return 'No printer was selected.';
+  if (e && e.name === 'NotFoundError') return 'No printer was selected. Close the NIIMBOT app, turn the printer off and on, then try again.';
+  if (e && (e.name === 'SecurityError' || /service/i.test(n))) return 'That device isn’t a Niimbot printer. Pick the one named B21S-….';
   if (n === 'nobt') return 'This browser can’t use Bluetooth. On iPhone, open the POS in the Bluefy app.';
   if (n === 'nolib') return 'The Niimbot printing add-on didn’t load. Open the app once while online.';
   if (/paper|label|cover|rfid/i.test(n)) return 'Printer says: ' + n + '. Check the label roll and lid.';
@@ -1808,7 +1810,7 @@ const PM_HINT = {
   bluetooth: hasBT ? 'Sends receipts straight to a Bluetooth LE thermal printer (ESC/POS). Turn the printer on, then tap Connect printer.'
                    : 'This browser can’t reach Bluetooth printers. On iPhone, open this POS’s link in the free Bluefy app instead of Safari. On Android, use Chrome.',
   dialog: 'Opens the system print dialog. Best on a laptop or iPad with the printer already set up.',
-  niimbot: hasNiim() ? 'Prints straight to your NIIMBOT label printer (B21S and similar) over Bluetooth. No need to open the Niimbot app. Turn the printer on, then tap Connect printer.'
+  niimbot: hasNiim() ? 'Prints straight to your NIIMBOT label printer (B21S and similar) over Bluetooth. Fully close the NIIMBOT app first, turn the printer on, then tap Connect printer and pick the device named B21S-….'
     : 'Direct Niimbot printing needs Bluetooth, which Safari doesn’t have. On iPhone, open this POS in the free Bluefy app instead. Until then, each sale opens the share sheet with label-sized images.'
 };
 function renderPrinter() {
