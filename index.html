@@ -458,6 +458,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <div class="seg" id="pmSeg">
                 <button type="button" data-pm="share">Share sheet<small>AirPrint or printer app</small></button>
                 <button type="button" data-pm="bluetooth">Bluetooth<small>Direct to thermal printer</small></button>
+                <button type="button" data-pm="niimbot">Niimbot<small>Label printer, direct</small></button>
                 <button type="button" data-pm="dialog">Print dialog<small>Laptop or iPad</small></button>
               </div>
               <p class="hint" id="pmHint"></p>
@@ -467,7 +468,9 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <button class="primary sm" id="btConnect" type="button">Connect printer</button>
             </div>
             <div class="field"><label class="label" for="s-paper">Paper width</label>
-              <select id="s-paper" data-key="paper"><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
+              <select id="s-paper" data-key="paper"><option value="l5080">Label 50 × 80 mm (Niimbot T50*80)</option><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
+            <div class="field" data-niim-only><label class="label" for="s-niimDensity">Print darkness</label>
+              <select id="s-niimDensity" data-key="niimDensity"><option value="1">1 · Lightest</option><option value="2">2</option><option value="3">3 · Normal</option><option value="4">4</option><option value="5">5 · Darkest</option></select></div>
             <label class="check"><input type="checkbox" id="s-autoPrint" data-key="autoPrint"> Print receipt right after each sale</label>
             <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Include the barista ticket in the same print</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-cutPaper" data-key="cutPaper"> Cut paper after printing (printers with a cutter)</label>
@@ -530,6 +533,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="print-area"></div>
 
+<script src="niimbluelib.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -571,7 +575,7 @@ const store = {
 try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } catch (e) { storageOK = false; }
 
 /* ================= data ================= */
-const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
+const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
   notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
@@ -613,6 +617,7 @@ function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
   if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
+  if (!S.niimV5) { S.paper = 'l5080'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
   if (!S.brandV4) { if (!S.shopName || S.shopName === 'Pop-Up Coffee') S.shopName = 'Eyes Wide Open'; S.printLogo = true; S.brandV4 = true; store.set('settings', S); }
   ORDERS = store.get('orders', []);
   SEQ = store.get('seq', {date: '', n: 0});
@@ -799,13 +804,13 @@ function specToHTML(spec) {
   }).join('') + '</div>';
 }
 function previewPaper(el) {
-  const w = S.paper === '58' ? '48mm' : '72mm', f = S.paper === '58' ? '10.5px' : '12px';
+  const w = S.paper === '80' ? '72mm' : '48mm', f = S.paper === '80' ? '12px' : '10.5px';
   el.style.setProperty('--pw', w); el.style.setProperty('--pfs', f);
 }
 
 /* Draws a spec onto a white canvas `W` dots wide (384 = 58mm, 576 = 80mm at 203 dpi). */
-function specToCanvas(spec, W) {
-  const base = W >= 576 ? 26 : 22;
+function specToCanvas(spec, W, o = {}) {
+  const base = o.base || (W >= 576 ? 26 : 22);
   const SZ = {s: Math.round(base * .86), m: base, ml: Math.round(base * 1.15), l: Math.round(base * 1.3), xl: Math.round(base * 2.6)};
   const pad = Math.round(base * .4), inner = W - pad * 2;
   const fam = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -825,12 +830,13 @@ function specToCanvas(spec, W) {
     if (line || !out.length) out.push(line);
     return out;
   };
-  const ops = []; let y = pad;
+  const ops = [], breaks = []; let y = pad;
   spec.forEach(r => {
+    breaks.push(y);
     if (r.k === 'hr') { ops.push({hr: Math.round(y + base * .45)}); y += Math.round(base * .9); return; }
     if (r.k === 'gap') { y += base; return; }
     if (r.k === 'img') {
-      if (logoImg.complete && logoImg.naturalWidth) { const iw = Math.round(W * r.w), ih = Math.round(iw * logoImg.naturalHeight / logoImg.naturalWidth); ops.push({img: logoImg, x: Math.round((W - iw) / 2), y, w: iw, h: ih}); y += ih + Math.round(base * .4); return; }
+      if (logoImg.complete && logoImg.naturalWidth) { const iw = Math.round(W * r.w * (o.logoK || 1)), ih = Math.round(iw * logoImg.naturalHeight / logoImg.naturalWidth); ops.push({img: logoImg, x: Math.round((W - iw) / 2), y, w: iw, h: ih}); y += ih + Math.round(base * .4); return; }
       r = {k: 'c', t: r.alt, sz: 'l', b: 1};
     }
     const font = fontOf(r); mc.font = font;
@@ -851,8 +857,39 @@ function specToCanvas(spec, W) {
     if (o.hr != null) { c.save(); c.setLineDash([8, 6]); c.lineWidth = 2; c.beginPath(); c.moveTo(pad, o.hr); c.lineTo(W - pad, o.hr); c.stroke(); c.restore(); return; }
     c.font = o.font; c.textAlign = o.a; c.fillText(o.t, o.x, o.y);
   });
+  breaks.push(H); cv.breaks = breaks;
   return cv;
 }
+
+/* ---------- 50 × 80 mm labels (Niimbot T50*80) ----------
+   203 dpi: 384 dots across the 48 mm print head, 640 dots along the 80 mm label.
+   Each receipt is shrunk to fit one label when it can; a long one continues on the next label. */
+const LABEL = {w: 384, h: 640, m: 14};
+const isLabel = () => S.paper === 'l5080';
+function labelPage(src, sy, sh, center) {
+  const cv = document.createElement('canvas'); cv.width = LABEL.w; cv.height = LABEL.h;
+  const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, LABEL.w, LABEL.h);
+  const top = center ? Math.max(LABEL.m, Math.round((LABEL.h - sh) / 2)) : LABEL.m;
+  c.drawImage(src, 0, sy, LABEL.w, sh, 0, top, LABEL.w, sh);
+  return cv;
+}
+function labelPages(spec) {
+  const avail = LABEL.h - LABEL.m * 2;
+  for (const base of [21, 19, 17]) {
+    const cv = specToCanvas(spec, LABEL.w, {base, logoK: .8});
+    if (cv.height <= avail) return [labelPage(cv, 0, cv.height, true)];
+  }
+  const cv = specToCanvas(spec, LABEL.w, {base: 19, logoK: .8}), pages = [];
+  let start = 0;
+  while (start < cv.height - 2) {
+    let end = Math.min(cv.height, start + avail);
+    if (end < cv.height) { const ok = cv.breaks.filter(b => b > start + 60 && b <= end); if (ok.length) end = ok[ok.length - 1]; }
+    pages.push(labelPage(cv, start, end - start, false)); start = end;
+  }
+  return pages;
+}
+/* The images a print produces: label pages, or one long strip per receipt on roll paper. */
+function specImages(specs, rollDots) { return isLabel() ? specs.flatMap(labelPages) : specs.map(s => specToCanvas(s, rollDots)); }
 
 /* ESC/POS raster bitmap (GS v 0), sent in 96-row bands so small printer buffers keep up. */
 function canvasToEscPos(cv) {
@@ -925,11 +962,55 @@ function printBluetooth(specs) {
   let ready = Promise.resolve();
   if (!BT.device) ready = btConnect();             // called inside the tap, so the chooser is allowed
   const job = BT.busy.then(() => ready).then(async () => {
-    const dots = S.paper === '58' ? 384 : 576;
-    for (const s of specs) await btWrite(canvasToEscPos(specToCanvas(s, dots)));
+    const dots = S.paper === '80' ? 576 : 384;
+    for (const cv of specImages(specs, dots)) await btWrite(canvasToEscPos(cv));
   });
   BT.busy = job.catch(() => {});
   job.then(() => toast('Printed'), e => toast(btError(e), 4000));
+}
+
+/* ---------- NIIMBOT label printers (B21S, B1, D110…) via niimbluelib, MIT licence, bundled for offline use ---------- */
+const NB = {client: null, device: null, busy: Promise.resolve()};
+const NIIM_SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
+const hasNiim = () => hasBT && !!window.niimbluelib;
+const nbConnected = () => !!(NB.client && NB.client.isConnected());
+async function niimConnect(pick) {
+  const L = window.niimbluelib;
+  if (!hasBT) throw new Error('nobt');
+  if (!L) throw new Error('nolib');
+  if (!NB.device || pick) {   // first await in the tap, so the Bluetooth chooser is allowed to open
+    NB.device = await navigator.bluetooth.requestDevice({filters: ['B', 'D', 'H', 'K', 'A', 'N', 'S', 'P', 'E', 'T'].map(l => ({namePrefix: l})).concat([{services: [NIIM_SERVICE]}]), optionalServices: [NIIM_SERVICE]});
+  }
+  if (NB.client) { try { await NB.client.disconnect(); } catch (e) {} }
+  NB.client = L.instantiateClient('bluetooth');
+  NB.client.on('disconnect', () => { if (view === 'settings') renderPrinter(); });
+  await NB.client.connect({authorizedDevice: NB.device});
+  if (view === 'settings') renderPrinter();
+}
+function niimError(e) {
+  const n = e && (e.message || e.name || String(e));
+  if (e && e.name === 'NotFoundError') return 'No printer was selected.';
+  if (n === 'nobt') return 'This browser can’t use Bluetooth. On iPhone, open the POS in the Bluefy app.';
+  if (n === 'nolib') return 'The Niimbot printing add-on didn’t load. Open the app once while online.';
+  if (/paper|label|cover|rfid/i.test(n)) return 'Printer says: ' + n + '. Check the label roll and lid.';
+  return 'Printing failed: ' + n + '. Check the printer is on and nearby, then try again.';
+}
+function printNiimbot(pages) {
+  const ready = nbConnected() ? Promise.resolve() : niimConnect(false);   // started inside the tap
+  const job = NB.busy.then(() => ready).then(async () => {
+    const L = window.niimbluelib, c = NB.client, meta = c.getModelMetadata();
+    const dir = (meta && meta.printDirection) || 'top';
+    const task = c.protocol.newPrintTask(c.getPrintTaskType() || 'D110', {
+      totalPages: pages.length, density: +S.niimDensity || 3, labelType: L.LabelType.WithGaps,
+      pageColor: L.PageColorType.SingleColor, statusPollIntervalMs: 100, statusTimeoutMs: 8000});
+    try {
+      await task.printInit();
+      for (const cv of pages) { await task.printPage(L.ImageEncoder.encodeCanvas(cv, L.PageColorType.SingleColor, dir), 1); await task.waitForPageFinished(); }
+      await task.waitForFinished();
+    } finally { try { await task.printEnd(); } catch (e) {} }
+  });
+  NB.busy = job.catch(() => {});
+  job.then(() => toast(pages.length > 1 ? `Printed ${pages.length} labels` : 'Printed'), e => { console.error(e); toast(niimError(e), 5000); });
 }
 
 /* ---------- Share sheet (AirPrint, printer apps, Save Image) ---------- */
@@ -939,7 +1020,8 @@ function canvasFile(cv, name) {
   return new File([u], name, {type: 'image/png'});
 }
 function printShare(specs, name) {
-  const files = specs.map((s, i) => canvasFile(specToCanvas(s, 576), `${name}${specs.length > 1 ? '-' + (i + 1) : ''}.png`));
+  const imgs = specImages(specs, 576);
+  const files = imgs.map((cv, i) => canvasFile(cv, `${name}${imgs.length > 1 ? '-' + (i + 1) : ''}.png`));
   if (navigator.canShare && navigator.canShare({files})) {
     navigator.share({files}).catch(e => { if (e && e.name !== 'AbortError') printDialog(specs); });
   } else printDialog(specs);
@@ -955,7 +1037,8 @@ function printDialog(specs) {
 
 function printSpecs(specs, name) {
   if (!specs.length) return;
-  if (S.printMode === 'bluetooth') printBluetooth(specs);
+  if (S.printMode === 'niimbot') { if (hasNiim()) printNiimbot(specImages(specs, 384)); else printShare(specs, name); }
+  else if (S.printMode === 'bluetooth') printBluetooth(specs);
   else if (S.printMode === 'share') printShare(specs, name);
   else printDialog(specs);
 }
@@ -964,7 +1047,7 @@ const TEAR = [{k: 'gap'}, {k: 'hr'}, {k: 'c', t: 'TEAR HERE', sz: 's'}, {k: 'hr'
    With a Bluetooth printer that has a cutter, the paper is cut between them instead of a tear line. */
 function orderSpecs(o, which, test) {
   const r = which.receipt ? receiptSpec(o, test) : null, b = which.barista ? baristaSpec(o) : null;
-  if (r && b) return S.printMode === 'bluetooth' && S.cutPaper ? [r, b] : [r.concat(TEAR, b)];
+  if (r && b) return isLabel() || (S.printMode === 'bluetooth' && S.cutPaper) ? [r, b] : [r.concat(TEAR, b)];
   return [r || b].filter(Boolean);
 }
 function printOrder(o, which) { printSpecs(orderSpecs(o, which), 'order-' + pad3(o.no)); }
@@ -1724,18 +1807,21 @@ const PM_HINT = {
   share: 'After each sale the iPhone share sheet opens with the receipt as an image. Tap Print for an AirPrint printer, or choose your printer’s own app.',
   bluetooth: hasBT ? 'Sends receipts straight to a Bluetooth LE thermal printer (ESC/POS). Turn the printer on, then tap Connect printer.'
                    : 'This browser can’t reach Bluetooth printers. On iPhone, open this POS’s link in the free Bluefy app instead of Safari. On Android, use Chrome.',
-  dialog: 'Opens the system print dialog. Best on a laptop or iPad with the printer already set up.'
+  dialog: 'Opens the system print dialog. Best on a laptop or iPad with the printer already set up.',
+  niimbot: hasNiim() ? 'Prints straight to your NIIMBOT label printer (B21S and similar) over Bluetooth. No need to open the Niimbot app. Turn the printer on, then tap Connect printer.'
+    : 'Direct Niimbot printing needs Bluetooth, which Safari doesn’t have. On iPhone, open this POS in the free Bluefy app instead. Until then, each sale opens the share sheet with label-sized images.'
 };
 function renderPrinter() {
   $$('#pmSeg button').forEach(b => b.classList.toggle('on', b.dataset.pm === S.printMode));
   $('#pmHint').textContent = PM_HINT[S.printMode] || '';
-  const bt = S.printMode === 'bluetooth';
-  $('#btBox').hidden = !bt || !hasBT;
+  const bt = S.printMode === 'bluetooth', nm = S.printMode === 'niimbot';
+  $('#btBox').hidden = !((bt && hasBT) || (nm && hasNiim()));
   $$('[data-bt-only]').forEach(el => { el.hidden = !bt; });
-  const on = !!(BT.device && BT.ch);
+  $$('[data-niim-only]').forEach(el => { el.hidden = !nm; });
+  const dev = nm ? NB.device : BT.device, on = nm ? nbConnected() : !!(BT.device && BT.ch);
   $('#btDot').className = 'dot ' + (on ? 'ok' : 'bad');
-  $('#btStatus').textContent = on ? 'Connected to ' + (BT.device.name || 'printer') : (BT.device ? 'Printer disconnected' : 'No printer connected');
-  $('#btConnect').textContent = on ? 'Change printer' : (BT.device ? 'Reconnect' : 'Connect printer');
+  $('#btStatus').textContent = on ? 'Connected to ' + (dev.name || 'printer') : (dev ? 'Printer disconnected' : 'No printer connected');
+  $('#btConnect').textContent = on ? 'Change printer' : (dev ? 'Reconnect' : 'Connect printer');
 }
 async function renderAppStatus() {
   const rows = [];
@@ -1760,6 +1846,11 @@ $('#v-settings').addEventListener('input', e => {
 });
 $('#pmSeg').addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (!b) return; S.printMode = b.dataset.pm; saveSettings(); renderPrinter(); });
 $('#btConnect').addEventListener('click', () => {
+  if (S.printMode === 'niimbot') {
+    $('#btStatus').textContent = 'Connecting…';
+    niimConnect(nbConnected() || !NB.device).then(() => toast('Connected to ' + (NB.device.name || 'printer')), e => { toast(niimError(e), 4500); renderPrinter(); });
+    return;
+  }
   const p = BT.device && !BT.ch ? btAttach().then(renderPrinter) : btConnect();
   p.catch(e => { toast(btError(e), 4000); renderPrinter(); });
 });

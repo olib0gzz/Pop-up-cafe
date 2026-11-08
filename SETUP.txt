@@ -30,3 +30,11 @@ INVENTORY (added Nov 2026)
    - Tap an ingredient to log "Bought more" (also updates its cost), a recount, or waste.
    - Menu tab > tap an item > its recipe button to change amounts. Cost and margin update live.
    - Report tab shows cost of goods, gross profit and ingredients used for any date range.
+
+NIIMBOT B21S LABEL PRINTING (added Nov 2026)
+   - Receipts are laid out for 50 x 80 mm labels (T50*80). Receipt and barista ticket print as
+     two labels in one go; a long order continues onto another label.
+   - Direct printing needs Bluetooth, which Safari does not have. On iPhone, open the app link in
+     the free Bluefy browser, then Settings > Printer > Niimbot > Connect printer > Test print.
+   - Close the official NIIMBOT app first: the printer only talks to one app at a time.
+   - Niimbot printing uses NiimBlueLib by MultiMote (MIT licence, see niimbluelib.LICENSE.txt).

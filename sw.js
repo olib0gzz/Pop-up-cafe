@@ -1,7 +1,7 @@
 // Keeps Coffee Counter POS working with no internet.
 // Bump VERSION whenever you change index.html so phones pick up the new copy.
-const VERSION = 'coffee-pos-v4';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const VERSION = 'coffee-pos-v5';
+const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './niimbluelib.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
