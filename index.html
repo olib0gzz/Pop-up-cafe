@@ -739,7 +739,7 @@ function receiptSpec(o, test) {
   if (S.address) R.push({k: 'c', t: S.address});
   if (S.contact) R.push({k: 'c', t: S.contact});
   R.push({k: 'hr'});
-  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: fmtDate(o.ts) + ' ' + fmtTime(o.ts)});
+  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: new Date(o.ts).toLocaleDateString('en-PH', {month: 'numeric', day: 'numeric', year: '2-digit'}) + ' ' + fmtTime(o.ts)});
   if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
   R.push({k: 't', t: 'Name: ' + (o.customer || '____________________'), b: 1, sz: 'ml'});
   if (o.voided) R.push({k: 'c', t: '*** VOIDED ***', b: 1});
@@ -814,7 +814,7 @@ function specToCanvas(spec, W, o = {}) {
   const SZ = {s: Math.round(base * .86), m: base, ml: Math.round(base * 1.15), l: Math.round(base * 1.3), xl: Math.round(base * 2.6)};
   const pad = Math.round(base * .4), inner = W - pad * 2;
   const fam = '-apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
-  const fontOf = r => `${r.b ? 700 : 500} ${SZ[r.sz || 'm']}px ${fam}`;
+  const fontOf = r => `${r.b ? 800 : (o.thermal ? 600 : 500)} ${SZ[r.sz || 'm']}px ${fam}`;
   const mc = document.createElement('canvas').getContext('2d');
   const wrap = (text, maxW) => {
     const out = []; let line = '';
@@ -862,34 +862,46 @@ function specToCanvas(spec, W, o = {}) {
 }
 
 /* ---------- 50 × 80 mm labels (Niimbot T50*80) ----------
-   203 dpi: 384 dots across the 48 mm print head, 640 dots along the 80 mm label.
-   Each receipt is shrunk to fit one label when it can; a long one continues on the next label. */
-const LABEL = {w: 384, h: 640, m: 14};
+   203 dpi = 8 dots per mm: a label is 400 × 640 dots; the B21S print head covers the middle 384.
+   Text is sized as large as possible so each receipt fills its label; a very long order continues on the next one. */
+const LABEL = {h: 640, m: 12};
 const isLabel = () => S.paper === 'l5080';
-function labelPage(src, sy, sh, center) {
-  const cv = document.createElement('canvas'); cv.width = LABEL.w; cv.height = LABEL.h;
-  const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, LABEL.w, LABEL.h);
+function labelPage(src, sy, sh, center, W) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = LABEL.h;
+  const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, W, LABEL.h);
   const top = center ? Math.max(LABEL.m, Math.round((LABEL.h - sh) / 2)) : LABEL.m;
-  c.drawImage(src, 0, sy, LABEL.w, sh, 0, top, LABEL.w, sh);
+  c.drawImage(src, 0, sy, src.width, sh, Math.round((W - src.width) / 2), top, src.width, sh);
   return cv;
 }
-function labelPages(spec) {
-  const avail = LABEL.h - LABEL.m * 2;
-  for (const base of [21, 19, 17]) {
-    const cv = specToCanvas(spec, LABEL.w, {base, logoK: .8});
-    if (cv.height <= avail) return [labelPage(cv, 0, cv.height, true)];
+function labelPages(spec, W) {
+  const avail = LABEL.h - LABEL.m * 2, CW = 384;   // draw inside the printable 48 mm, centred on the 50 mm label
+  // Keep the logo a good size first, then use the biggest text that still fits.
+  for (const [logoK, hi, lo] of [[.8, 26, 19], [.65, 22, 16], [.5, 17, 15]]) {
+    for (let base = hi; base >= lo; base--) {
+      const cv = specToCanvas(spec, CW, {base, logoK, thermal: true});
+      if (cv.height <= avail) return [labelPage(cv, 0, cv.height, true, W)];
+    }
   }
-  const cv = specToCanvas(spec, LABEL.w, {base: 19, logoK: .8}), pages = [];
+  const cv = specToCanvas(spec, CW, {base: 17, logoK: .55, thermal: true}), pages = [];
   let start = 0;
   while (start < cv.height - 2) {
     let end = Math.min(cv.height, start + avail);
     if (end < cv.height) { const ok = cv.breaks.filter(b => b > start + 60 && b <= end); if (ok.length) end = ok[ok.length - 1]; }
-    pages.push(labelPage(cv, start, end - start, false)); start = end;
+    pages.push(labelPage(cv, start, end - start, false, W)); start = end;
   }
   return pages;
 }
-/* The images a print produces: label pages, or one long strip per receipt on roll paper. */
-function specImages(specs, rollDots) { return isLabel() ? specs.flatMap(labelPages) : specs.map(s => specToCanvas(s, rollDots)); }
+/* Thermal printers have no grey: snap every pixel to pure black or white so text prints crisp, not smudged. */
+function binarize(cv, cut = 165) {
+  const c = cv.getContext('2d'), im = c.getImageData(0, 0, cv.width, cv.height), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i + 3] < 128 ? 255 : (d[i] * .299 + d[i + 1] * .587 + d[i + 2] * .114 < cut ? 0 : 255);
+    d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+  }
+  c.putImageData(im, 0, 0); return cv;
+}
+/* The images a print produces: label pages (W dots wide), or one long strip per receipt on roll paper. */
+function specImages(specs, rollDots, labelW = 384) { return isLabel() ? specs.flatMap(s => labelPages(s, labelW)).map(c => binarize(c)) : specs.map(s => specToCanvas(s, rollDots)); }
 
 /* ESC/POS raster bitmap (GS v 0), sent in 96-row bands so small printer buffers keep up. */
 function canvasToEscPos(cv) {
@@ -963,7 +975,7 @@ function printBluetooth(specs) {
   if (!BT.device) ready = btConnect();             // called inside the tap, so the chooser is allowed
   const job = BT.busy.then(() => ready).then(async () => {
     const dots = S.paper === '80' ? 576 : 384;
-    for (const cv of specImages(specs, dots)) await btWrite(canvasToEscPos(cv));
+    for (const cv of specImages(specs, dots, 384)) await btWrite(canvasToEscPos(cv));
   });
   BT.busy = job.catch(() => {});
   job.then(() => toast('Printed'), e => toast(btError(e), 4000));
@@ -1022,7 +1034,7 @@ function canvasFile(cv, name) {
   return new File([u], name, {type: 'image/png'});
 }
 function printShare(specs, name) {
-  const imgs = specImages(specs, 576);
+  const imgs = specImages(specs, 576, 400);   // labels: exactly 50 × 80 mm (400 × 640) so the NIIMBOT app fills the label
   const files = imgs.map((cv, i) => canvasFile(cv, `${name}${imgs.length > 1 ? '-' + (i + 1) : ''}.png`));
   if (navigator.canShare && navigator.canShare({files})) {
     navigator.share({files}).catch(e => { if (e && e.name !== 'AbortError') printDialog(specs); });
@@ -1039,7 +1051,7 @@ function printDialog(specs) {
 
 function printSpecs(specs, name) {
   if (!specs.length) return;
-  if (S.printMode === 'niimbot') { if (hasNiim()) printNiimbot(specImages(specs, 384)); else printShare(specs, name); }
+  if (S.printMode === 'niimbot') { if (hasNiim()) printNiimbot(specImages(specs, 384, 384)); else printShare(specs, name); }
   else if (S.printMode === 'bluetooth') printBluetooth(specs);
   else if (S.printMode === 'share') printShare(specs, name);
   else printDialog(specs);
