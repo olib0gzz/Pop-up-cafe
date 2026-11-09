@@ -349,6 +349,11 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
 .r-hr{border-top:1px dashed #000;margin:6px 0}
 .r-gap{height:1.4em}
 .r-logo{display:block;margin:2px auto 6px;height:auto}
+.r-head{display:flex;align-items:flex-start;gap:.7em;margin-bottom:4px}
+.r-head > div{flex:1}
+.r-hgap{height:.7em}
+.r-head img{width:26%;height:auto;flex:none}
+.r-head > div{min-width:0;overflow-wrap:anywhere}
 @media print{
   @page{margin:0}
   html,body{background:#fff!important;color:#000}
@@ -487,7 +492,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <button class="primary sm" id="btConnect" type="button">Connect printer</button>
             </div>
             <div class="field"><label class="label" for="s-paper">Paper width</label>
-              <select id="s-paper" data-key="paper"><option value="l5080">Label 50 × 80 mm (Niimbot T50*80)</option><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
+              <select id="s-paper" data-key="paper"><option value="l5050">Label 50 × 50 mm</option><option value="l5080">Label 50 × 80 mm (Niimbot T50*80)</option><option value="58">58 mm roll</option><option value="80">80 mm roll</option></select></div>
             <div class="field" data-niim-only><label class="label" for="s-niimDensity">Print darkness</label>
               <select id="s-niimDensity" data-key="niimDensity"><option value="1">1 · Lightest</option><option value="2">2</option><option value="3">3 · Normal</option><option value="4">4</option><option value="5">5 · Darkest</option></select></div>
             <div class="two-in" data-niim-only>
@@ -612,7 +617,7 @@ try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } 
 
 /* ================= data ================= */
 const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'balanced', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
-  notOfficial: true, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
+  notOfficial: false, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
 const SHEET_INGR = [ // name, unit, pack cost, pack size
@@ -653,9 +658,11 @@ function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
   if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
+  if (!S.noOfficialLine) { S.notOfficial = false; S.noOfficialLine = true; store.set('settings', S); }
+  if (!S.label5050) { S.paper = 'l5050'; S.label5050 = true; store.set('settings', S); }
   if (!S.niimV11) { S.niimSend = 'balanced'; S.niimV11 = true; store.set('settings', S); }
   if (!S.niimV8) { if (S.niimShiftX == null || S.niimShiftX === '') S.niimShiftX = '-3'; if (S.niimShiftY == null || S.niimShiftY === '') S.niimShiftY = '0'; S.niimTask = S.niimTask || 'auto'; S.niimV8 = true; store.set('settings', S); }
-  if (!S.niimV5) { S.paper = 'l5080'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
+  if (!S.niimV5) { S.paper = 'l5050'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
   if (!S.brandV4) { if (!S.shopName || S.shopName === 'Pop-Up Coffee') S.shopName = 'Eyes Wide Open'; S.printLogo = true; S.brandV4 = true; store.set('settings', S); }
   ORDERS = store.get('orders', []);
   SEQ = store.get('seq', {date: '', n: 0});
@@ -773,13 +780,17 @@ function saveFile(name, content, type) {
 function receiptSpec(o, test) {
   const R = [];
   if (test) R.push({k: 'c', t: '*** TEST PRINT ***', b: 1});
-  if (S.printLogo) R.push({k: 'img', w: .5, alt: S.shopName}); else R.push({k: 'c', t: S.shopName, sz: 'l', b: 1});
-  if (S.address) R.push({k: 'c', t: S.address});
-  if (S.contact) R.push({k: 'c', t: S.contact});
-  R.push({k: 'hr'});
-  R.push({k: 'lr', l: 'Order #' + pad3(o.no), r: new Date(o.ts).toLocaleDateString('en-PH', {month: 'numeric', day: 'numeric'}) + ' ' + fmtTime(o.ts)});
-  if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
-  R.push({k: 't', t: 'Name: ' + (o.customer || '____________________'), b: 1, sz: 'ml'});
+  const when = new Date(o.ts).toLocaleDateString('en-PH', {month: 'numeric', day: 'numeric', year: '2-digit'}) + ' ' + fmtTime(o.ts);
+  const name = 'Name: ' + (o.customer || '__________');
+  if (S.printLogo) {   // logo in the top-left corner, order details beside it
+    R.push({k: 'head', alt: S.shopName, lines: [{t: when, sz: 's', a: 'r'}, {gap: 1}, {t: 'Order #' + pad3(o.no), b: 1, sz: 'ml'}, {t: name, b: 1, sz: 'ml'}].concat(S.cashier ? [{t: 'Cashier: ' + S.cashier, sz: 's'}] : [])});
+  } else {
+    R.push({k: 'c', t: S.shopName, sz: 'l', b: 1}, {k: 'hr'}, {k: 'lr', l: 'Order #' + pad3(o.no), r: when});
+    if (S.cashier) R.push({k: 'lr', l: 'Cashier', r: S.cashier});
+    R.push({k: 't', t: name, b: 1, sz: 'ml'});
+  }
+  if (S.address) R.push({k: 'c', t: S.address, sz: 's'});
+  if (S.contact) R.push({k: 'c', t: S.contact, sz: 's'});
   if (o.voided) R.push({k: 'c', t: '*** VOIDED ***', b: 1});
   R.push({k: 'hr'});
   o.lines.forEach(l => {
@@ -789,8 +800,7 @@ function receiptSpec(o, test) {
     if (l.note) R.push({k: 't', t: '* ' + l.note, ind: 1, sz: 's'});
   });
   R.push({k: 'hr'});
-  R.push({k: 'lr', l: 'Subtotal', r: money(o.sub)});
-  if (o.disc) R.push({k: 'lr', l: o.discLabel || 'Discount', r: '-' + money(o.disc)});
+  if (o.disc) R.push({k: 'lr', l: 'Subtotal', r: money(o.sub)}, {k: 'lr', l: o.discLabel || 'Discount', r: '-' + money(o.disc)});
   R.push({k: 'lr', l: 'TOTAL', r: money(o.total), sz: 'l', b: 1});
   R.push({k: 'lr', l: o.method, r: money(o.tendered)});
   if (isCash(o.method)) R.push({k: 'lr', l: 'Change', r: money(o.change)});
@@ -836,6 +846,7 @@ function specToHTML(spec) {
     if (r.k === 'hr') return '<div class="r-hr"></div>';
     if (r.k === 'gap') return '<div class="r-gap"></div>';
     if (r.k === 'img') return `<img class="r-logo" src="${RECEIPT_LOGO}" alt="${esc(r.alt || '')}" style="width:${r.w * 100}%">`;
+    if (r.k === 'head') return `<div class="r-head"><img src="${RECEIPT_LOGO}" alt="${esc(r.alt || '')}"><div>${r.lines.map(l => l.gap ? '<div class="r-hgap"></div>' : `<div class="${cls(l)}" ${l.a === 'r' ? 'style="text-align:right"' : ''}>${esc(l.t)}</div>`).join('')}</div></div>`;
     if (r.k === 'c') return `<div class="r-c ${cls(r)}">${esc(r.t)}</div>`;
     if (r.k === 't') return `<div class="${cls(r)}">${esc(r.t)}</div>`;
     return `<div class="r-row ${cls(r)}"><span>${esc(r.l)}</span><span>${esc(r.r)}</span></div>`;
@@ -877,6 +888,20 @@ function specToCanvas(spec, W, o = {}) {
       if (logoImg.complete && logoImg.naturalWidth) { const iw = Math.round(W * r.w * (o.logoK || 1)), ih = Math.round(iw * logoImg.naturalHeight / logoImg.naturalWidth); ops.push({img: logoImg, x: Math.round((W - iw) / 2), y, w: iw, h: ih}); y += ih + Math.round(base * .4); return; }
       r = {k: 'c', t: r.alt, sz: 'l', b: 1};
     }
+    if (r.k === 'head') {
+      const has = logoImg.complete && logoImg.naturalWidth;
+      const L = has ? Math.round(W * (o.headLogo || .26)) : 0, Lh = has ? Math.round(L * logoImg.naturalHeight / logoImg.naturalWidth) : 0;
+      const tx = pad + (L ? L + Math.round(base * .7) : 0), tw = W - pad - tx, tl = [];
+      r.lines.forEach(ln => {
+        if (ln.gap) { tl.push({gap: Math.round(base * .7 * ln.gap)}); return; }
+        const f = fontOf(ln); mc.font = f; const lh = Math.round(SZ[ln.sz || 'm'] * 1.25);
+        wrap(ln.t, tw).forEach(t => tl.push({font: f, t, lh, a: ln.a === 'r' ? 'right' : 'left'}));
+      });
+      const th = tl.reduce((a, l) => a + (l.gap || l.lh), 0), hh = Math.max(Lh, th);
+      if (L) ops.push({img: logoImg, x: pad, y, w: L, h: Lh});   // logo in the top-left corner
+      let ty = y; tl.forEach(l => { if (l.gap) { ty += l.gap; return; } ops.push({font: l.font, t: l.t, x: l.a === 'right' ? W - pad : tx, y: ty, a: l.a}); ty += l.lh; });
+      y += hh + Math.round(base * .35); return;
+    }
     const font = fontOf(r); mc.font = font;
     const lh = Math.round(SZ[r.sz || 'm'] * 1.28);
     if (r.k === 'c') { wrap(r.t, inner).forEach(t => { ops.push({font, t, x: W / 2, y, a: 'center'}); y += lh; }); return; }
@@ -902,27 +927,30 @@ function specToCanvas(spec, W, o = {}) {
 /* ---------- 50 × 80 mm labels (Niimbot T50*80) ----------
    203 dpi = 8 dots per mm: a label is 400 × 640 dots; the B21S print head covers the middle 384.
    Text is sized as large as possible so each receipt fills its label; a very long order continues on the next one. */
-const LABEL = {h: 640, m: 12};
-const isLabel = () => S.paper === 'l5080';
+const LABEL = {m: 10, get h() { return S.paper === 'l5050' ? 400 : 640; }};   // 50 × 50 mm = 400 dots tall, 50 × 80 mm = 640
+const isLabel = () => /^l50/.test(S.paper);
 function labelPage(src, sy, sh, center, W) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = LABEL.h;
   const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, W, LABEL.h);
-  const room = Math.floor((W - src.width) / 2), mm = v => Math.round((parseFloat(v) || 0) * 8);   // 8 dots per mm
-  const dx = Math.max(-room, Math.min(room, mm(S.niimShiftX))), dy = Math.max(-40, Math.min(40, mm(S.niimShiftY)));
+  // The left/right and up/down nudge only applies when printing straight to the B21S (384 dots wide),
+  // whose print sits a little off-centre; preview and share images (400 wide) stay centred.
+  const direct = W === 384, room = Math.floor((W - src.width) / 2);
+  const dx = direct ? Math.max(-room, Math.min(room, niimDots(S.niimShiftX))) : 0, dy = direct ? Math.max(-40, Math.min(40, niimDots(S.niimShiftY))) : 0;
   const top = (center ? Math.max(LABEL.m, Math.round((LABEL.h - sh) / 2)) : LABEL.m) + dy;
   c.drawImage(src, 0, sy, src.width, sh, room + dx, top, src.width, sh);
   return cv;
 }
+const niimDots = v => Math.round((parseFloat(v) || 0) * 8);   // 8 dots per mm
 function labelPages(spec, W) {
-  const avail = LABEL.h - LABEL.m * 2, CW = 336;   // 42 mm of content: leaves room to nudge left/right on the 48 mm print head
-  // Keep the logo a good size first, then use the biggest text that still fits.
-  for (const [logoK, hi, lo] of [[.8, 26, 19], [.65, 22, 16], [.5, 17, 15]]) {
-    for (let base = hi; base >= lo; base--) {
-      const cv = specToCanvas(spec, CW, {base, logoK, thermal: true});
-      if (cv.height <= avail) return [labelPage(cv, 0, cv.height, true, W)];
-    }
+  // Content width: 46 mm when centred; when printing direct, narrow it just enough that the nudge keeps it on the label.
+  const avail = LABEL.h - LABEL.m * 2, CW = W === 384 ? Math.max(320, 384 - 2 * Math.abs(niimDots(S.niimShiftX))) : 368;
+  const logo = 107 / CW;   // logo stays 107 dots (about 13 mm) wide whatever the content width
+  // Use the biggest text that still fits on one label (logo stays the same size).
+  for (let base = 26; base >= 13; base--) {
+    const cv = specToCanvas(spec, CW, {base, logoK: .6, headLogo: logo, thermal: true});
+    if (cv.height <= avail) return [labelPage(cv, 0, cv.height, true, W)];
   }
-  const cv = specToCanvas(spec, CW, {base: 17, logoK: .55, thermal: true}), pages = [];
+  const cv = specToCanvas(spec, CW, {base: 15, logoK: .6, headLogo: logo, thermal: true}), pages = [];
   let start = 0;
   while (start < cv.height - 2) {
     let end = Math.min(cv.height, start + avail);
