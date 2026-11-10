@@ -500,7 +500,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <div class="field"><label class="label" for="s-niimShiftY">Move print up / down (mm)</label><input id="s-niimShiftY" data-key="niimShiftY" type="number" step="0.5" min="-5" max="5" inputmode="decimal"></div></div>
             <p class="hint" data-niim-only>Negative moves left or up. Change it, then use Test print until the receipt sits in the middle of the label.</p>
             <div class="field" data-niim-only><label class="label" for="s-niimSend">Bluetooth sending</label>
-              <select id="s-niimSend" data-key="niimSend"><option value="balanced">Balanced (fast and safe, recommended)</option><option value="reliable">Confirmed (slowest, safest)</option><option value="fast">Fast (may cause data errors on iPhone)</option></select>
+              <select id="s-niimSend" data-key="niimSend"><option value="reliable">Confirmed (recommended)</option><option value="balanced">Balanced (faster, may print blank on iPhone)</option><option value="fast">Fast (may cause blank prints or data errors)</option></select>
               <p class="hint" id="niimMode"></p></div>
             <div class="field" data-niim-only><label class="label" for="s-niimTask">Printer protocol</label>
               <select id="s-niimTask" data-key="niimTask"><option value="auto">Automatic (recommended)</option><option value="D110">D110</option><option value="B21_V1">B21 V1</option><option value="B1">B1</option><option value="D110M_V4">D110M V4</option></select>
@@ -615,7 +615,7 @@ const store = {
 try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } catch (e) { storageOK = false; }
 
 /* ================= data ================= */
-const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'balanced', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
+const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'reliable', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
   notOfficial: false, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: false,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
@@ -660,7 +660,8 @@ function load() {
   if (!S.noBarista) { S.baristaTicket = false; S.noBarista = true; store.set('settings', S); }   // receipt only
   if (!S.noOfficialLine) { S.notOfficial = false; S.noOfficialLine = true; store.set('settings', S); }
   if (!S.label5050) { S.paper = 'l5050'; S.label5050 = true; store.set('settings', S); }
-  if (!S.niimV11) { S.niimSend = 'balanced'; S.niimV11 = true; store.set('settings', S); }
+  if (!S.niimV11) { S.niimV11 = true; }
+  if (!S.niimV13) { S.niimSend = 'reliable'; S.niimV13 = true; store.set('settings', S); }   // balanced dropped data on iPad: blank labels
   if (!S.niimV8) { if (S.niimShiftX == null || S.niimShiftX === '') S.niimShiftX = '-3'; if (S.niimShiftY == null || S.niimShiftY === '') S.niimShiftY = '0'; S.niimTask = S.niimTask || 'auto'; S.niimV8 = true; store.set('settings', S); }
   if (!S.niimV5) { S.paper = 'l5050'; S.printMode = 'niimbot'; S.niimDensity = S.niimDensity || '3'; S.niimV5 = true; store.set('settings', S); }
   if (!S.brandV4) { if (!S.shopName || S.shopName === 'Pop-Up Coffee') S.shopName = 'Eyes Wide Open'; S.printLogo = true; S.brandV4 = true; store.set('settings', S); }
@@ -1093,7 +1094,7 @@ function niimReliable() {
   if (!ch) return;
   if (!ch.__orig) ch.__orig = ch.writeValueWithoutResponse.bind(ch);
   const canConfirm = ch.properties && ch.properties.write && typeof ch.writeValueWithResponse === 'function';
-  const mode = NB.forceConfirmed ? 'reliable' : (S.niimSend || 'balanced');
+  const mode = NB.forceConfirmed ? 'reliable' : (S.niimSend || 'reliable');
   let n = 0;
   if (canConfirm && mode === 'reliable') {
     ch.writeValueWithoutResponse = d => ch.writeValueWithResponse(d); c.setPacketInterval(0); NB.mode = 'confirmed';
