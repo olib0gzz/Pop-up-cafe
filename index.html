@@ -506,7 +506,6 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07
               <select id="s-niimTask" data-key="niimTask"><option value="auto">Automatic (recommended)</option><option value="D110">D110</option><option value="B21_V1">B21 V1</option><option value="B1">B1</option><option value="D110M_V4">D110M V4</option></select>
               <p class="hint">Only change this if labels repeat, print blank or show a data error. Try one, then Test print.</p></div>
             <label class="check"><input type="checkbox" id="s-autoPrint" data-key="autoPrint"> Print receipt right after each sale</label>
-            <label class="check"><input type="checkbox" id="s-baristaTicket" data-key="baristaTicket"> Include the barista ticket in the same print</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-cutPaper" data-key="cutPaper"> Cut paper after printing (printers with a cutter)</label>
             <label class="check" data-bt-only><input type="checkbox" id="s-btSlow" data-key="btSlow"> Slow mode (try this if receipts print garbled or cut off)</label>
           </div>
@@ -617,7 +616,7 @@ try { localStorage.setItem(NS + 't', '1'); localStorage.removeItem(NS + 't'); } 
 
 /* ================= data ================= */
 const DEFAULT_SETTINGS = {shopName: 'Eyes Wide Open', printLogo: true, niimDensity: '3', niimSend: 'balanced', niimShiftX: '-3', niimShiftY: '0', niimTask: 'auto', cashier: '', address: '', contact: '', footer: 'Thank you! See you again.',
-  notOfficial: false, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: true,
+  notOfficial: false, methods: 'Cash, GCash, Maya, Card', currency: '₱', paper: '58', autoPrint: true, baristaTicket: false,
   printMode: '', cutPaper: true, btSlow: false};
 /* Ingredients and recipes from the "Eyes Wide Open Costing" sheet (Ingredients tab + the four costing tabs). */
 const SHEET_INGR = [ // name, unit, pack cost, pack size
@@ -657,7 +656,8 @@ let S, MENU, ADDONS, ORDERS, SEQ, cart, INGR, INVLOG;
 function load() {
   S = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
   if (!S.printMode) S.printMode = isIOS ? (hasBT ? 'bluetooth' : 'share') : 'dialog';
-  if (!S.onePrint) { S.baristaTicket = true; S.onePrint = true; store.set('settings', S); }
+  if (!S.onePrint) { S.onePrint = true; store.set('settings', S); }
+  if (!S.noBarista) { S.baristaTicket = false; S.noBarista = true; store.set('settings', S); }   // receipt only
   if (!S.noOfficialLine) { S.notOfficial = false; S.noOfficialLine = true; store.set('settings', S); }
   if (!S.label5050) { S.paper = 'l5050'; S.label5050 = true; store.set('settings', S); }
   if (!S.niimV11) { S.niimSend = 'balanced'; S.niimV11 = true; store.set('settings', S); }
@@ -1150,7 +1150,7 @@ function printNiimbot(pages) {
     if (err) throw err;
   });
   NB.busy = job.catch(() => {});
-  job.then(() => pstat('ok', n > 1 ? `Printed ${n} labels` : 'Printed', n > 1 ? 'Receipt and barista ticket are done' : 'Done'),
+  job.then(() => pstat('ok', n > 1 ? `Printed ${n} labels` : 'Printed', n > 1 ? 'Long order, continued on a second label' : 'Receipt is done'),
     e => {
       console.error(e);
       const code = e && (e.code != null ? e.code : +((/Print error (\d+)/.exec(e.message || '') || [])[1]));
@@ -1375,7 +1375,7 @@ function openItemModal(item, editIndex) {
       `<button type="button" data-i="${i}">${esc(v.label || 'Regular')}<small>${moneyShort(v.price)}</small></button>`).join('')}</div></div>` : ''}
     ${showAddons ? `<div class="field"><div class="label">Add-ons</div><div class="chips" id="mAdd">${ADDONS.map(a =>
       `<button type="button" class="chip" data-id="${a.id}">${esc(a.name)}${a.price ? ` <small>+${moneyShort(a.price)}</small>` : ''}</button>`).join('')}</div></div>` : ''}
-    <div class="field"><label class="label" for="mNote">Note for barista</label><input id="mNote" placeholder="e.g. less ice, extra hot" value="${esc(ex ? ex.note : '')}" autocomplete="off" enterkeyhint="done"></div>
+    <div class="field"><label class="label" for="mNote">Note (prints on the receipt)</label><input id="mNote" placeholder="e.g. less ice, extra hot" value="${esc(ex ? ex.note : '')}" autocomplete="off" enterkeyhint="done"></div>
     <div class="m-foot"><div class="qty lg"><button type="button" id="mDec" aria-label="One less">−</button><span id="mQty"></span><button type="button" id="mInc" aria-label="One more">+</button></div>
       <button class="primary" id="mOk" type="button"></button></div>
     ${ex ? '<div class="m-actions"><button class="ghost danger-text sm" id="mRm" type="button">Remove from order</button></div>' : ''}`);
@@ -1477,7 +1477,7 @@ function completeSale(method, tendered, ref) {
   closeModal(); closeSheet();
   renderTicket(); renderGrid(); renderHeader();
   showDone(o);
-  if (S.autoPrint || S.baristaTicket) printOrder(o, {receipt: S.autoPrint, barista: S.baristaTicket});
+  if (S.autoPrint) printOrder(o, {receipt: true});
   if (lowNow.length) setTimeout(() => toast((lowNow.some(i => i.stock <= 0) ? 'Check stock: ' : 'Running low: ') + lowNow.map(i => `${i.name} (${fmtQty(Math.max(0, i.stock), i.unit)} left)`).join(', '), 5000), 400);
 }
 function showDone(o) {
@@ -1487,13 +1487,10 @@ function showDone(o) {
       ${cash ? `<div class="label">Change</div><div class="big-amt">${money(o.change)}</div><div class="muted">${money(o.tendered)} cash received</div>`
              : `<div class="big-amt">${money(o.total)}</div><div class="muted">Paid via ${esc(o.method)}</div>`}</div>
     <div class="paper" id="dPaper">${specToHTML(receiptSpec(o))}</div>
-    <div class="m-actions stack"><button class="ghost span" id="dBoth" type="button">Print receipt + barista ticket</button>
-      <button class="ghost" id="dRcpt" type="button">Receipt only</button><button class="ghost" id="dBar" type="button">Ticket only</button>
+    <div class="m-actions stack"><button class="ghost span" id="dRcpt" type="button">Print receipt again</button>
       <button class="primary" data-close type="button">New order</button></div>`, true);
   previewPaper($('#dPaper', m));
-  $('#dBoth', m).onclick = () => printOrder(o, {receipt: true, barista: true});
   $('#dRcpt', m).onclick = () => printOrder(o, {receipt: true});
-  $('#dBar', m).onclick = () => printOrder(o, {barista: true});
 }
 
 /* ================= orders ================= */
@@ -1518,14 +1515,10 @@ $('#oList').addEventListener('click', e => {
   const o = ORDERS.find(x => x.id === b.dataset.id); if (!o) return;
   const m = openModal(`<div class="m-head"><h2>Order #${pad3(o.no)}</h2><span class="muted">${fmtTime(o.ts)}</span></div>
     <div class="paper" id="vPaper">${specToHTML(receiptSpec(o))}</div>
-    <div class="m-actions stack"><button class="ghost" id="vBar" type="button">Barista ticket</button>
-      ${o.voided ? '<span></span>' : '<button class="ghost danger-text" id="vVoid" type="button">Void order</button>'}
-      <button class="ghost span" id="vBoth" type="button">Reprint receipt + barista ticket</button>
+    <div class="m-actions stack">${o.voided ? '' : '<button class="ghost danger-text span" id="vVoid" type="button">Void order</button>'}
       <button class="primary" id="vPrint" type="button">Reprint receipt</button></div>`, true);
   previewPaper($('#vPaper', m));
-  $('#vBoth', m).onclick = () => printOrder(o, {receipt: true, barista: true});
   $('#vPrint', m).onclick = () => printOrder(o, {receipt: true});
-  $('#vBar', m).onclick = () => printOrder(o, {barista: true});
   if (!o.voided) $('#vVoid', m).onclick = async () => {
     if (await confirmBox({title: `Void order #${pad3(o.no)}?`, body: `${money(o.total)} will be removed from sales totals and its ingredients go back into inventory. The order stays in the list, marked voided.`, ok: 'Void order', danger: true})) {
       o.voided = true; o.voidedAt = Date.now(); saveOrders(); restoreUsage(o); renderOrders(); renderHeader(); toast(`Order #${pad3(o.no)} voided`);
@@ -2010,7 +2003,7 @@ $('#testPrint').addEventListener('click', () => {
   const o = {no: 0, ts: Date.now(), customer: 'Test', method: 'Cash', tendered: 500, ref: '', voided: false, disc: 0, discLabel: '',
     lines: [{name: 'Café Latte', variant: '16 oz', price: 150, addons: [{name: 'Oat milk', price: 35}], qty: 1, note: 'less ice'}, {name: 'Butter Croissant', variant: '', price: 95, addons: [], qty: 2, note: ''}]};
   o.sub = o.lines.reduce((a, l) => a + lineTotal(l), 0); o.total = o.sub; o.change = r2(o.tendered - o.total);
-  printSpecs(orderSpecs(o, {receipt: true, barista: S.baristaTicket}, true), 'test-receipt');
+  printSpecs(orderSpecs(o, {receipt: true}, true), 'test-receipt');
 });
 $('#dBackup').addEventListener('click', () => {
   saveFile(`coffee-pos-backup-${today()}.json`, JSON.stringify({app: 'coffee-pos', v: 2, savedAt: new Date().toISOString(), settings: S, menu: MENU, addons: ADDONS, orders: ORDERS, seq: SEQ, ingredients: INGR, invlog: INVLOG}), 'application/json');
